@@ -54,7 +54,7 @@ const MOCK_USERS: Record<UserRole, User> = {
   },
   chief_secretary: {
     id: "cs-001",
-    name: "Shri. R. S. Sharma, IAS",
+    name: "Shri. Rajesh Aggarwal, IAS",
     designation: "Chief Secretary, Government of Maharashtra",
     role: "chief_secretary",
     email: "cs@maharashtra.gov.in",
