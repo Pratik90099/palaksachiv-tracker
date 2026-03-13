@@ -1,25 +1,51 @@
 import { useState } from "react";
+import { useTasks, useDeleteTask } from "@/hooks/use-data";
+import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
-import { MOCK_ACTIONABLES, ISSUE_CATEGORIES, ActionableStatus, Priority, STATUS_CONFIG, PRIORITY_CONFIG } from "@/lib/mock-data";
-import { Search, Filter, Plus, Download, Shield, Globe, ChevronDown } from "lucide-react";
+import { ISSUE_CATEGORIES, STATUS_CONFIG, PRIORITY_CONFIG } from "@/lib/mock-data";
+import { Search, Plus, Download, Shield, Globe, Edit2, Trash2, MapPin, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+import type { ActionableStatus, Priority } from "@/lib/mock-data";
 
 export default function ActionablesPage() {
+  const { data: tasks, isLoading } = useTasks();
+  const deleteTask = useDeleteTask();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showForm, setShowForm] = useState(false);
+  const [editTask, setEditTask] = useState<any>(null);
 
-  const filtered = MOCK_ACTIONABLES.filter((item) => {
-    if (searchQuery && !item.description.toLowerCase().includes(searchQuery.toLowerCase()) && !item.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+  const filtered = (tasks || []).filter((item) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (
+        !(item.title?.toLowerCase().includes(q)) &&
+        !(item.description?.toLowerCase().includes(q)) &&
+        !(item.display_id?.toLowerCase().includes(q))
+      ) return false;
+    }
     if (statusFilter !== "all" && item.status !== statusFilter) return false;
     if (priorityFilter !== "all" && item.priority !== priorityFilter) return false;
-    if (categoryFilter !== "all" && item.category !== categoryFilter) return false;
+    if (categoryFilter !== "all" && item.projects?.category !== categoryFilter) return false;
     return true;
   });
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Delete this task?")) {
+      try {
+        await deleteTask.mutateAsync(id);
+        toast.success("Task deleted");
+      } catch (err: any) {
+        toast.error(err.message);
+      }
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -32,7 +58,7 @@ export default function ActionablesPage() {
           <Button variant="outline" size="sm" className="text-muted-foreground">
             <Download className="h-4 w-4 mr-1" /> Export
           </Button>
-          <Button size="sm" className="bg-primary text-primary-foreground">
+          <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { setEditTask(null); setShowForm(true); }}>
             <Plus className="h-4 w-4 mr-1" /> New Actionable
           </Button>
         </div>
@@ -50,9 +76,7 @@ export default function ActionablesPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] text-sm">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
+          <SelectTrigger className="w-[150px] text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             {Object.entries(STATUS_CONFIG).map(([key, val]) => (
@@ -61,9 +85,7 @@ export default function ActionablesPage() {
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-[130px] text-sm">
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
+          <SelectTrigger className="w-[130px] text-sm"><SelectValue placeholder="Priority" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Priority</SelectItem>
             {Object.entries(PRIORITY_CONFIG).map(([key, val]) => (
@@ -72,9 +94,7 @@ export default function ActionablesPage() {
           </SelectContent>
         </Select>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[160px] text-sm">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
+          <SelectTrigger className="w-[160px] text-sm"><SelectValue placeholder="Category" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {ISSUE_CATEGORIES.map((cat) => (
@@ -84,64 +104,93 @@ export default function ActionablesPage() {
         </Select>
       </div>
 
-      {/* Results count */}
       <p className="text-xs text-muted-foreground">{filtered.length} actionable{filtered.length !== 1 ? "s" : ""} found</p>
 
-      {/* Table */}
-      <div className="gov-card-elevated overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="gov-table-header">
-                <th className="text-left px-4 py-3">ID</th>
-                <th className="text-left px-4 py-3">Description</th>
-                <th className="text-left px-4 py-3">District</th>
-                <th className="text-left px-4 py-3">Category</th>
-                <th className="text-left px-4 py-3">Priority</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-left px-4 py-3">Target Date</th>
-                <th className="text-left px-4 py-3">Flags</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((item, i) => (
-                <motion.tr
-                  key={item.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="hover:bg-secondary/30 transition-colors cursor-pointer"
-                >
-                  <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{item.id}</td>
-                  <td className="px-4 py-3">
-                    <p className="text-sm font-medium text-foreground line-clamp-1 max-w-xs">{item.description}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{item.agency}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-foreground">{item.district}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{item.category}</td>
-                  <td className="px-4 py-3"><PriorityBadge priority={item.priority} /></td>
-                  <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{item.targetDate}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {item.isCritical && (
-                        <span className="gov-badge bg-gov-danger-light text-gov-danger text-[10px]">
-                          <Shield className="h-2.5 w-2.5" /> Critical
-                        </span>
-                      )}
-                      {item.isGOIPending && (
-                        <span className="gov-badge bg-gov-warning-light text-gov-warning text-[10px]">
-                          <Globe className="h-2.5 w-2.5" /> GOI
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+      {isLoading ? (
+        <div className="text-center py-10 text-muted-foreground">Loading...</div>
+      ) : (
+        <div className="gov-card-elevated overflow-hidden p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="gov-table-header">
+                  <th className="text-left px-4 py-3">ID</th>
+                  <th className="text-left px-4 py-3">Description</th>
+                  <th className="text-left px-4 py-3">Districts</th>
+                  <th className="text-left px-4 py-3">Departments</th>
+                  <th className="text-left px-4 py-3">Priority</th>
+                  <th className="text-left px-4 py-3">Status</th>
+                  <th className="text-left px-4 py-3">Target Date</th>
+                  <th className="text-left px-4 py-3">Flags</th>
+                  <th className="text-left px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((item, i) => {
+                  const districtNames = item.task_districts?.map((td: any) => td.districts?.name).filter(Boolean) || [];
+                  const deptNames = item.task_departments?.map((td: any) => td.departments?.short_name || td.departments?.name).filter(Boolean) || [];
+                  return (
+                    <motion.tr
+                      key={item.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="hover:bg-secondary/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{item.display_id}</td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-medium text-foreground line-clamp-1 max-w-xs">{item.title}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{item.agency}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-xs text-foreground">
+                          <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="line-clamp-1">{districtNames.join(", ") || "—"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          <span className="line-clamp-1">{deptNames.join(", ") || "—"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><PriorityBadge priority={item.priority as Priority} /></td>
+                      <td className="px-4 py-3"><StatusBadge status={item.status as ActionableStatus} /></td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{item.target_date || "—"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          {item.is_critical && (
+                            <span className="gov-badge bg-gov-danger-light text-gov-danger text-[10px]">
+                              <Shield className="h-2.5 w-2.5" /> Critical
+                            </span>
+                          )}
+                          {item.is_goi_pending && (
+                            <span className="gov-badge bg-gov-warning-light text-gov-warning text-[10px]">
+                              <Globe className="h-2.5 w-2.5" /> GOI
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditTask(item); setShowForm(true); }}>
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      <TaskFormDialog open={showForm} onOpenChange={setShowForm} editTask={editTask} />
     </div>
   );
 }
