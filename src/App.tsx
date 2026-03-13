@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/AppLayout";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ActionablesPage from "./pages/ActionablesPage";
+import ProjectsPage from "./pages/ProjectsPage";
 import HeatMapPage from "./pages/HeatMapPage";
 import VisitsPage from "./pages/VisitsPage";
 import CompliancePage from "./pages/CompliancePage";
@@ -35,6 +36,7 @@ function AppRoutes() {
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
       <Route path="/actionables" element={<ProtectedRoute><ActionablesPage /></ProtectedRoute>} />
       <Route path="/heat-map" element={<ProtectedRoute><HeatMapPage /></ProtectedRoute>} />
       <Route path="/visits" element={<ProtectedRoute><VisitsPage /></ProtectedRoute>} />
