@@ -116,12 +116,14 @@ function GlobalSearch() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications();
   const { data: tasks } = useTasks();
 
-  // Count "urgent" items for notification badge
-  const urgentCount = (tasks || []).filter(
+  // Count "urgent" items for notification badge (unread notifications + overdue/escalated tasks)
+  const taskUrgent = (tasks || []).filter(
     (t) => t.status === "overdue" || t.status === "escalated"
   ).length;
+  const urgentCount = unreadCount + taskUrgent;
 
   return (
     <SidebarProvider>
