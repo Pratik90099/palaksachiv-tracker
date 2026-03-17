@@ -13,6 +13,7 @@ import type { ActionableStatus, Priority } from "@/lib/mock-data";
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects();
+  const { user } = useAuth();
   const deleteProject = useDeleteProject();
   const [searchQuery, setSearchQuery] = useState("");
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -20,7 +21,15 @@ export default function ProjectsPage() {
   const [editProject, setEditProject] = useState<any>(null);
   const [taskProjectId, setTaskProjectId] = useState<string>("");
 
-  const filtered = (projects || []).filter((p) => {
+  const isDeptSec = user?.role === "department_secretary";
+  const userDept = user?.department;
+
+  const filtered = (projects || []).filter((p: any) => {
+    if (isDeptSec && userDept) {
+      const deptNames = p.project_departments?.map((pd: any) => pd.departments?.name).filter(Boolean) || [];
+      const match = deptNames.some((d: string) => userDept.includes(d) || d.includes(userDept.split(" ")[0]));
+      if (!match) return false;
+    }
     if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });

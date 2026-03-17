@@ -14,6 +14,7 @@ import type { ActionableStatus, Priority } from "@/lib/mock-data";
 
 export default function ActionablesPage() {
   const { data: tasks, isLoading } = useTasks();
+  const { user } = useAuth();
   const deleteTask = useDeleteTask();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -22,7 +23,17 @@ export default function ActionablesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTask, setEditTask] = useState<any>(null);
 
-  const filtered = (tasks || []).filter((item) => {
+  const isDeptSec = user?.role === "department_secretary";
+  const userDept = user?.department;
+
+  const deptFiltered = (tasks || []).filter((item: any) => {
+    if (!isDeptSec || !userDept) return true;
+    const deptNames = item.task_departments?.map((td: any) => td.departments?.name).filter(Boolean) || [];
+    return deptNames.some((d: string) => userDept.includes(d) || d.includes(userDept.split(" ")[0])) ||
+      (item.agency && userDept.split(" ").some((word: string) => word.length > 2 && item.agency.toLowerCase().includes(word.toLowerCase())));
+  });
+
+  const filtered = deptFiltered.filter((item) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       if (
