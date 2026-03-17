@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useTasks, useProjects } from "@/hooks/use-data";
+import { useNotifications } from "@/hooks/use-notifications";
 
 interface SearchResult {
   type: "task" | "project";
@@ -115,12 +116,14 @@ function GlobalSearch() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications();
   const { data: tasks } = useTasks();
 
-  // Count "urgent" items for notification badge
-  const urgentCount = (tasks || []).filter(
+  // Count "urgent" items for notification badge (unread notifications + overdue/escalated tasks)
+  const taskUrgent = (tasks || []).filter(
     (t) => t.status === "overdue" || t.status === "escalated"
   ).length;
+  const urgentCount = unreadCount + taskUrgent;
 
   return (
     <SidebarProvider>

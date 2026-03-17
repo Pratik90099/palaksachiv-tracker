@@ -1,18 +1,18 @@
 // Mock data for the Guardian Secretary District Monitoring Portal
 
 export const MAHARASHTRA_DISTRICTS = [
-  "Ahmednagar", "Akola", "Amravati", "Aurangabad", "Beed", "Bhandara",
-  "Buldhana", "Chandrapur", "Dhule", "Gadchiroli", "Gondia", "Hingoli",
-  "Jalgaon", "Jalna", "Kolhapur", "Latur", "Mumbai City", "Mumbai Suburban",
-  "Nagpur", "Nanded", "Nandurbar", "Nashik", "Osmanabad", "Palghar",
-  "Parbhani", "Pune", "Raigad", "Ratnagiri", "Sangli", "Satara",
-  "Sindhudurg", "Solapur", "Thane", "Wardha", "Washim", "Yavatmal"
+  "Ahilyanagar", "Akola", "Amravati", "Beed", "Bhandara",
+  "Buldhana", "Chandrapur", "Chhatrapati Sambhajinagar", "Dharashiv", "Dhule",
+  "Gadchiroli", "Gondia", "Hingoli", "Jalgaon", "Jalna", "Kolhapur",
+  "Latur", "Mumbai City", "Mumbai Suburban", "Nagpur", "Nanded", "Nandurbar",
+  "Nashik", "Palghar", "Parbhani", "Pune", "Raigad", "Ratnagiri",
+  "Sangli", "Satara", "Sindhudurg", "Solapur", "Thane", "Wardha", "Washim", "Yavatmal"
 ] as const;
 
 export const DIVISIONS = {
   "Pune": ["Pune", "Satara", "Sangli", "Solapur", "Kolhapur"],
-  "Nashik": ["Nashik", "Dhule", "Nandurbar", "Jalgaon", "Ahmednagar"],
-  "Aurangabad": ["Aurangabad", "Jalna", "Hingoli", "Parbhani", "Beed", "Osmanabad", "Latur", "Nanded"],
+  "Nashik": ["Nashik", "Dhule", "Nandurbar", "Jalgaon", "Ahilyanagar"],
+  "Aurangabad": ["Chhatrapati Sambhajinagar", "Jalna", "Hingoli", "Parbhani", "Beed", "Dharashiv", "Latur", "Nanded"],
   "Nagpur": ["Nagpur", "Wardha", "Bhandara", "Gondia", "Chandrapur", "Gadchiroli"],
   "Amravati": ["Amravati", "Akola", "Washim", "Buldhana", "Yavatmal"],
   "Konkan": ["Mumbai City", "Mumbai Suburban", "Thane", "Palghar", "Raigad", "Ratnagiri", "Sindhudurg"],

@@ -34,11 +34,11 @@ const MOCK_USERS: Record<UserRole, User> = {
     designation: "Additional Chief Secretary, Public Works Department",
     role: "department_secretary",
     department: "Public Works Department (PWD)",
-    email: "ACS.pwd@maharashtra.gov.in",
+    email: "acs.pwd@maharashtra.gov.in",
   },
   district_collector: {
     id: "dc-001",
-    name: "Shri. Saurabh Rao, IAS",
+    name: "Shri. Jitendra Dudi, IAS",
     designation: "District Collector, Pune",
     role: "district_collector",
     district: "Pune",
@@ -57,7 +57,6 @@ const MOCK_USERS: Record<UserRole, User> = {
     name: "Shri. Rajesh Aggarwal, IAS",
     designation: "Chief Secretary, Government of Maharashtra",
     role: "chief_secretary",
-    district: "Gadchiroli",
     email: "cs@maharashtra.gov.in",
   },
   cmo: {
