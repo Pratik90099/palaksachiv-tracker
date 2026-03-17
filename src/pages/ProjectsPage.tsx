@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useProjects, useDeleteProject } from "@/hooks/use-data";
-import { useAuth } from "@/lib/auth-context";
+import { useRoleFilter } from "@/hooks/use-role-filter";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
@@ -13,7 +13,7 @@ import type { ActionableStatus, Priority } from "@/lib/mock-data";
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects();
-  const { user } = useAuth();
+  const { filterProjects } = useRoleFilter();
   const deleteProject = useDeleteProject();
   const [searchQuery, setSearchQuery] = useState("");
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -21,15 +21,7 @@ export default function ProjectsPage() {
   const [editProject, setEditProject] = useState<any>(null);
   const [taskProjectId, setTaskProjectId] = useState<string>("");
 
-  const isDeptSec = user?.role === "department_secretary";
-  const userDept = user?.department;
-
-  const filtered = (projects || []).filter((p: any) => {
-    if (isDeptSec && userDept) {
-      const deptNames = p.project_departments?.map((pd: any) => pd.departments?.name).filter(Boolean) || [];
-      const match = deptNames.some((d: string) => userDept.includes(d) || d.includes(userDept.split(" ")[0]));
-      if (!match) return false;
-    }
+  const filtered = filterProjects(projects || []).filter((p: any) => {
     if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
