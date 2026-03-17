@@ -1,7 +1,7 @@
 import {
-  LayoutDashboard, MapPin, ClipboardList, AlertTriangle, Users, FileText,
+  Home, MapPin, ClipboardList, AlertTriangle, Users, FileText,
   Settings, LogOut, Shield, Bell, BarChart3, Globe, Calendar, Building2,
-  FolderKanban
+  FolderKanban, User, HelpCircle
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
