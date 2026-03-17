@@ -19,7 +19,18 @@ export default function DashboardPage() {
   const { data: tasks } = useTasks();
   const { data: visits } = useVisits();
 
-  const allTasks = tasks || [];
+  const isDeptSec = user?.role === "department_secretary";
+  const userDept = user?.department;
+
+  // Filter tasks by department for department_secretary
+  const allTasks = (tasks || []).filter((t: any) => {
+    if (!isDeptSec || !userDept) return true;
+    const deptNames = t.task_departments?.map((td: any) => td.departments?.name).filter(Boolean) || [];
+    // Also check agency field for legacy/mock matching
+    return deptNames.some((d: string) => userDept.includes(d) || d.includes(userDept.split(" ")[0])) ||
+      (t.agency && userDept.split(" ").some((word: string) => word.length > 2 && t.agency.toLowerCase().includes(word.toLowerCase())));
+  });
+
   const allVisits = visits || [];
 
   const totalActionables = allTasks.length;
