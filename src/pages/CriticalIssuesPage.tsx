@@ -1,4 +1,5 @@
 import { useTasks } from "@/hooks/use-data";
+import { useRoleFilter } from "@/hooks/use-role-filter";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { AlertTriangle, Shield, Clock, ArrowUpRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,8 @@ import type { ActionableStatus, Priority } from "@/lib/mock-data";
 
 export default function CriticalIssuesPage() {
   const { data: tasks } = useTasks();
-  const allTasks = tasks || [];
+  const { filterTasks } = useRoleFilter();
+  const allTasks = filterTasks(tasks || []);
 
   const criticalItems = allTasks.filter(a => a.is_critical || a.priority === "critical");
   const pendingClassification = allTasks.filter(a => a.priority === "high" && !a.is_critical).slice(0, 5);

@@ -6,6 +6,7 @@ import {
   TrendingUp, Users, CheckCircle, Clock, Shield, ArrowUpRight
 } from "lucide-react";
 import { useTasks, useVisits } from "@/hooks/use-data";
+import { useRoleFilter } from "@/hooks/use-role-filter";
 import { QUARTERLY_DATA, DEPARTMENT_PERFORMANCE } from "@/lib/mock-data";
 import type { ActionableStatus, Priority } from "@/lib/mock-data";
 import {
@@ -18,20 +19,10 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: tasks } = useTasks();
   const { data: visits } = useVisits();
+  const { filterTasks, filterVisits } = useRoleFilter();
 
-  const isDeptSec = user?.role === "department_secretary";
-  const userDept = user?.department;
-
-  // Filter tasks by department for department_secretary
-  const allTasks = (tasks || []).filter((t: any) => {
-    if (!isDeptSec || !userDept) return true;
-    const deptNames = t.task_departments?.map((td: any) => td.departments?.name).filter(Boolean) || [];
-    // Also check agency field for legacy/mock matching
-    return deptNames.some((d: string) => userDept.includes(d) || d.includes(userDept.split(" ")[0])) ||
-      (t.agency && userDept.split(" ").some((word: string) => word.length > 2 && t.agency.toLowerCase().includes(word.toLowerCase())));
-  });
-
-  const allVisits = visits || [];
+  const allTasks = filterTasks(tasks || []);
+  const allVisits = filterVisits(visits || []);
 
   const totalActionables = allTasks.length;
   const openItems = allTasks.filter(t => !["closed", "completed_pending_closure"].includes(t.status)).length;
@@ -59,18 +50,25 @@ export default function DashboardPage() {
   const isCS = user?.role === "chief_secretary";
   const isCMO = user?.role === "cmo";
   const isApex = isCS || isCMO;
+  const isDeptSec = user?.role === "department_secretary";
+
+  const titleText = isDeptSec ? `${user?.department || "Department"} Dashboard` :
+    user?.role === "divisional_commissioner" ? `${user?.division || ""} Division Dashboard` :
+    isApex ? "State Overview" :
+    (user?.role === "guardian_secretary" || user?.role === "district_collector") ? `${user?.district || ""} District Dashboard` :
+    "Dashboard";
+
+  const subtitleText = user?.district ? `Q4 2024-25 • ${user.district} District` :
+    user?.division ? `Q4 2024-25 • ${user.division} Division` :
+    user?.department ? `Q4 2024-25 • ${user.department}` :
+    "Q4 2024-25 • All 36 Districts";
 
   return (
     <div className="p-6 space-y-6">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground font-display">
-            {isDeptSec ? `${userDept || "Department"} Dashboard` :
-             isApex ? "State Overview" : user?.role === "guardian_secretary" ? "My District Dashboard" : "Dashboard"}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Q4 2024-25 • {user?.district ? `${user.district} District` : "All 36 Districts"}
-          </p>
+          <h1 className="text-2xl font-bold text-foreground font-display">{titleText}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{subtitleText}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="gov-badge bg-gov-success-light text-gov-success">

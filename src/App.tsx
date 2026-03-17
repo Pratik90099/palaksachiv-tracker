@@ -21,6 +21,8 @@ import DepartmentsPage from "./pages/DepartmentsPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import HelpPage from "./pages/HelpPage";
+import UserManagementPage from "./pages/UserManagementPage";
+import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +55,8 @@ function AppRoutes() {
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,4 +1,5 @@
 import { useTasks } from "@/hooks/use-data";
+import { useRoleFilter } from "@/hooks/use-role-filter";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Globe, IndianRupee, Clock, Building2, Download, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,8 @@ const COLORS = ["hsl(220, 70%, 22%)", "hsl(220, 55%, 35%)", "hsl(42, 92%, 50%)",
 
 export default function GOIPendingPage() {
   const { data: tasks } = useTasks();
-  const goiItems = (tasks || []).filter(a => a.is_goi_pending);
+  const { filterTasks } = useRoleFilter();
+  const goiItems = filterTasks(tasks || []).filter(a => a.is_goi_pending);
 
   return (
     <div className="p-6 space-y-6">

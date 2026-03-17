@@ -1,4 +1,5 @@
 import { useTasks } from "@/hooks/use-data";
+import { useRoleFilter } from "@/hooks/use-role-filter";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Shield, ArrowUp, Clock, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
@@ -14,7 +15,8 @@ const ESCALATION_LEVELS = [
 
 export default function EscalationsPage() {
   const { data: tasks } = useTasks();
-  const escalatedItems = (tasks || []).filter(a => a.status === "escalated" || a.status === "overdue");
+  const { filterTasks } = useRoleFilter();
+  const escalatedItems = filterTasks(tasks || []).filter(a => a.status === "escalated" || a.status === "overdue");
 
   return (
     <div className="p-6 space-y-6">
