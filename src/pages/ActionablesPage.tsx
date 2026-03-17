@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTasks, useDeleteTask } from "@/hooks/use-data";
+import { useAuth } from "@/lib/auth-context";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { ISSUE_CATEGORIES, STATUS_CONFIG, PRIORITY_CONFIG } from "@/lib/mock-data";
