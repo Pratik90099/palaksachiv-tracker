@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useTasks, useProjects } from "@/hooks/use-data";
+import { useNotifications } from "@/hooks/use-notifications";
 
 interface SearchResult {
   type: "task" | "project";
