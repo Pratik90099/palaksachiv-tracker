@@ -1,7 +1,7 @@
 import {
-  LayoutDashboard, MapPin, ClipboardList, AlertTriangle, Users, FileText,
+  Home, MapPin, ClipboardList, AlertTriangle, Users, FileText,
   Settings, LogOut, Shield, Bell, BarChart3, Globe, Calendar, Building2,
-  FolderKanban
+  FolderKanban, User, HelpCircle
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -16,12 +16,12 @@ import {
 interface NavItem {
   title: string;
   url: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof Home;
   roles: UserRole[];
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
+  { title: "Home", url: "/dashboard", icon: Home, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Projects", url: "/projects", icon: FolderKanban, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "District Heat Map", url: "/heat-map", icon: MapPin, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary"] },
   { title: "Actionables", url: "/actionables", icon: ClipboardList, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo"] },
@@ -34,6 +34,9 @@ const NAV_ITEMS: NavItem[] = [
   { title: "MIS Reports", url: "/reports", icon: FileText, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary"] },
   { title: "Departments", url: "/departments", icon: Building2, roles: ["chief_secretary", "cmo", "department_secretary"] },
   { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },
+  { title: "My Profile", url: "/profile", icon: User, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
+  { title: "Notifications", url: "/notifications", icon: Bell, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
+  { title: "Help & Support", url: "/help", icon: HelpCircle, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["system_admin"] },
 ];
 
