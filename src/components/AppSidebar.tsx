@@ -16,7 +16,7 @@ import {
 interface NavItem {
   title: string;
   url: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof Home;
   roles: UserRole[];
 }
 
