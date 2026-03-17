@@ -65,7 +65,8 @@ export default function DashboardPage() {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground font-display">
-            {isApex ? "State Overview" : user?.role === "guardian_secretary" ? "My District Dashboard" : "Dashboard"}
+            {isDeptSec ? `${userDept || "Department"} Dashboard` :
+             isApex ? "State Overview" : user?.role === "guardian_secretary" ? "My District Dashboard" : "Dashboard"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Q4 2024-25 • {user?.district ? `${user.district} District` : "All 36 Districts"}
