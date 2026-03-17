@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useProjects, useDeleteProject } from "@/hooks/use-data";
+import { useAuth } from "@/lib/auth-context";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
