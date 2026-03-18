@@ -92,6 +92,11 @@ export default function ProjectsPage() {
                     <h3 className="text-sm font-semibold text-foreground">{project.title}</h3>
                     {project.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{project.description}</p>}
                     <div className="flex flex-wrap gap-3 mt-2">
+                      {tagNames.length > 0 && tagNames.map((t: string) => (
+                        <span key={t} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                          <Tag className="h-2.5 w-2.5" /> {t}
+                        </span>
+                      ))}
                       {districtNames.length > 0 && (
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <MapPin className="h-3 w-3" /> {districtNames.join(", ")}
