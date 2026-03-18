@@ -229,8 +229,9 @@ export function useUpdateProject() {
       target_date?: string;
       district_ids?: string[];
       department_ids?: string[];
+      tag_ids?: string[];
     }) => {
-      const { id, district_ids, department_ids, ...projectData } = input;
+      const { id, district_ids, department_ids, tag_ids, ...projectData } = input;
       const { error } = await supabase.from("projects").update(projectData).eq("id", id);
       if (error) throw error;
 
@@ -251,6 +252,16 @@ export function useUpdateProject() {
             department_ids.map((did) => ({ project_id: id, department_id: did }))
           );
           if (dpErr) throw dpErr;
+        }
+      }
+
+      if (tag_ids !== undefined) {
+        await supabase.from("project_tag_assignments").delete().eq("project_id", id);
+        if (tag_ids.length > 0) {
+          const { error: tErr } = await supabase.from("project_tag_assignments").insert(
+            tag_ids.map((tid) => ({ project_id: id, tag_id: tid }))
+          );
+          if (tErr) throw tErr;
         }
       }
     },
