@@ -1,6 +1,60 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Project Categories
+export function useProjectCategories() {
+  return useQuery({
+    queryKey: ["project_categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_categories")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCreateProjectCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; description?: string; color?: string }) => {
+      const { data, error } = await supabase.from("project_categories").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project_categories"] }); },
+  });
+}
+
+// Project Tags
+export function useProjectTags() {
+  return useQuery({
+    queryKey: ["project_tags"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_tags")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCreateProjectTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string }) => {
+      const { data, error } = await supabase.from("project_tags").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project_tags"] }); },
+  });
+}
+
 // Districts
 export function useDistricts() {
   return useQuery({
