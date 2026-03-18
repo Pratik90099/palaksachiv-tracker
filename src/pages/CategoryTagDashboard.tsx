@@ -132,9 +132,9 @@ export default function CategoryTagDashboard() {
               </div>
               <div className="text-xl font-bold text-foreground">{counts.total}</div>
               <div className="flex gap-2 mt-1">
-                {counts.in_progress > 0 && <span className="text-[10px] text-blue-600">▶ {counts.in_progress}</span>}
-                {counts.completed > 0 && <span className="text-[10px] text-green-600">✓ {counts.completed}</span>}
-                {counts.overdue > 0 && <span className="text-[10px] text-red-600">! {counts.overdue}</span>}
+                {counts.in_progress > 0 && <span className="text-[10px] text-primary">▶ {counts.in_progress}</span>}
+                {counts.completed > 0 && <span className="text-[10px] text-accent-foreground">✓ {counts.completed}</span>}
+                {counts.overdue > 0 && <span className="text-[10px] text-destructive">! {counts.overdue}</span>}
               </div>
             </motion.div>
           );
