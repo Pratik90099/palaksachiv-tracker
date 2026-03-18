@@ -24,6 +24,8 @@ import HelpPage from "./pages/HelpPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import SettingsPage from "./pages/SettingsPage";
 import CategoryTagDashboard from "./pages/CategoryTagDashboard";
+import IntegrationHealthPage from "./pages/IntegrationHealthPage";
+import GovernanceScorecardPage from "./pages/GovernanceScorecardPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
