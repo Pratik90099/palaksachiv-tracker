@@ -174,8 +174,9 @@ export function useCreateProject() {
       target_date?: string;
       district_ids: string[];
       department_ids: string[];
+      tag_ids?: string[];
     }) => {
-      const { district_ids, department_ids, ...projectData } = input;
+      const { district_ids, department_ids, tag_ids, ...projectData } = input;
       const { data: project, error } = await supabase
         .from("projects")
         .insert(projectData)
@@ -195,6 +196,13 @@ export function useCreateProject() {
           department_ids.map((did) => ({ project_id: project.id, department_id: did }))
         );
         if (dpErr) throw dpErr;
+      }
+
+      if (tag_ids && tag_ids.length > 0) {
+        const { error: tErr } = await supabase.from("project_tag_assignments").insert(
+          tag_ids.map((tid) => ({ project_id: project.id, tag_id: tid }))
+        );
+        if (tErr) throw tErr;
       }
 
       return project;
