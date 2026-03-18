@@ -1,5 +1,4 @@
 import {
-import {
   Home, MapPin, ClipboardList, AlertTriangle, Users, FileText,
   Settings, LogOut, Shield, Bell, BarChart3, Globe, Calendar, Building2,
   FolderKanban, User, HelpCircle, Tag, Activity, Trophy
