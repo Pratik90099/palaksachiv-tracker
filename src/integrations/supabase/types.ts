@@ -91,6 +91,62 @@ export type Database = {
           },
         ]
       }
+      meeting_minutes: {
+        Row: {
+          action_items: string[] | null
+          agenda: string | null
+          attendees: string[] | null
+          chaired_by: string | null
+          created_at: string
+          decisions: string[] | null
+          id: string
+          meeting_date: string
+          minutes_text: string
+          related_project_id: string | null
+          title: string
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          action_items?: string[] | null
+          agenda?: string | null
+          attendees?: string[] | null
+          chaired_by?: string | null
+          created_at?: string
+          decisions?: string[] | null
+          id?: string
+          meeting_date?: string
+          minutes_text: string
+          related_project_id?: string | null
+          title: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          action_items?: string[] | null
+          agenda?: string | null
+          attendees?: string[] | null
+          chaired_by?: string | null
+          created_at?: string
+          decisions?: string[] | null
+          id?: string
+          meeting_date?: string
+          minutes_text?: string
+          related_project_id?: string | null
+          title?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_minutes_related_project_id_fkey"
+            columns: ["related_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
