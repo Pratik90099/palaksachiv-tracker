@@ -23,6 +23,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { title: "Home", url: "/dashboard", icon: Home, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Projects", url: "/projects", icon: FolderKanban, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
+  { title: "Category Dashboard", url: "/category-dashboard", icon: Tag, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "District Heat Map", url: "/heat-map", icon: MapPin, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary"] },
   { title: "Actionables", url: "/actionables", icon: ClipboardList, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo"] },
   { title: "Visit Management", url: "/visits", icon: Calendar, roles: ["guardian_secretary", "district_collector", "chief_secretary", "cmo"] },
