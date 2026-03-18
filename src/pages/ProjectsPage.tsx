@@ -71,6 +71,7 @@ export default function ProjectsPage() {
           {filtered.map((project, i) => {
             const districtNames = project.project_districts?.map((pd: any) => pd.districts?.name).filter(Boolean) || [];
             const deptNames = project.project_departments?.map((pd: any) => pd.departments?.short_name || pd.departments?.name).filter(Boolean) || [];
+            const tagNames = (project as any).project_tag_assignments?.map((pt: any) => pt.project_tags?.name).filter(Boolean) || [];
 
             return (
               <motion.div
