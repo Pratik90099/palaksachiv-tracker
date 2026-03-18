@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Plus, Calendar, Users, CheckCircle2, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Plus, Calendar, Users, CheckCircle2, Clock, ChevronDown, ChevronUp, Download, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useProjects } from "@/hooks/use-data";
+import { useProjects, useCreateTask } from "@/hooks/use-data";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -54,12 +54,60 @@ function useCreateMinutes() {
   });
 }
 
+function generateMinutesPDF(m: any) {
+  const html = `
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8">
+    <title>${m.title}</title>
+    <style>
+      body { font-family: 'Georgia', serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #1a1a2e; }
+      .header { text-align: center; border-bottom: 3px double #1a1a2e; padding-bottom: 20px; margin-bottom: 30px; }
+      .header h1 { font-size: 18px; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 1px; }
+      .header .subtitle { font-size: 22px; font-weight: bold; margin: 10px 0 5px; }
+      .header .meta { font-size: 12px; color: #555; }
+      .section { margin: 20px 0; }
+      .section h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #ccc; padding-bottom: 4px; color: #1a1a2e; }
+      .section p, .section li { font-size: 13px; line-height: 1.7; }
+      ul { padding-left: 20px; }
+      .attendee-list { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+      .attendee-list span { font-size: 12px; }
+      .footer { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 11px; color: #888; text-align: center; }
+    </style></head><body>
+    <div class="header">
+      <h1>Government of Maharashtra</h1>
+      <p class="meta">Chief Secretary's Office</p>
+      <p class="subtitle">${m.title}</p>
+      <p class="meta">Date: ${format(new Date(m.meeting_date), "dd MMMM yyyy")}${m.venue ? ` | Venue: ${m.venue}` : ""}${m.chaired_by ? ` | Chaired by: ${m.chaired_by}` : ""}</p>
+    </div>
+    ${m.attendees?.length ? `<div class="section"><h3>Attendees</h3><div class="attendee-list">${m.attendees.map((a: string) => `<span>• ${a}</span>`).join("")}</div></div>` : ""}
+    ${m.agenda ? `<div class="section"><h3>Agenda</h3><p>${m.agenda}</p></div>` : ""}
+    <div class="section"><h3>Minutes of the Meeting</h3><p>${m.minutes_text.replace(/\n/g, "<br/>")}</p></div>
+    ${m.decisions?.length ? `<div class="section"><h3>Key Decisions</h3><ul>${m.decisions.map((d: string) => `<li>${d}</li>`).join("")}</ul></div>` : ""}
+    ${m.action_items?.length ? `<div class="section"><h3>Action Items</h3><ul>${m.action_items.map((a: string) => `<li>${a}</li>`).join("")}</ul></div>` : ""}
+    ${m.projects ? `<div class="section"><h3>Related Project</h3><p>${m.projects.title}</p></div>` : ""}
+    <div class="footer">
+      <p>This is a system-generated document from GS Portal — Chief Secretary's Office, Government of Maharashtra</p>
+      <p>Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")}</p>
+    </div>
+    </body></html>
+  `;
+
+  const printWindow = window.open("", "_blank");
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  }
+}
+
 export default function RecordMinutesPage() {
   const { data: minutes, isLoading } = useMeetingMinutes();
   const { data: projects } = useProjects();
   const createMinutes = useCreateMinutes();
+  const createTask = useCreateTask();
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [convertedItems, setConvertedItems] = useState<Set<string>>(new Set());
 
   // Form state
   const [form, setForm] = useState({
@@ -98,6 +146,38 @@ export default function RecordMinutesPage() {
       attendees: "", agenda: "", minutes_text: "", decisions: "", action_items: "", related_project_id: "",
     });
     setOpen(false);
+  };
+
+  const handleConvertToTask = (minuteId: string, actionItem: string, index: number, relatedProjectId?: string) => {
+    const key = `${minuteId}-${index}`;
+    if (convertedItems.has(key)) return;
+
+    createTask.mutate({
+      title: actionItem,
+      description: `Auto-created from meeting minutes action item`,
+      priority: "high",
+      status: "not_started",
+      is_goi_pending: false,
+      is_critical: false,
+      project_id: relatedProjectId || undefined,
+      district_ids: [],
+      department_ids: [],
+    }, {
+      onSuccess: () => {
+        setConvertedItems(prev => new Set(prev).add(key));
+        toast.success("Action item converted to task");
+      },
+      onError: () => toast.error("Failed to create task"),
+    });
+  };
+
+  const handleConvertAll = (m: any) => {
+    (m.action_items || []).forEach((item: string, idx: number) => {
+      const key = `${m.id}-${idx}`;
+      if (!convertedItems.has(key)) {
+        handleConvertToTask(m.id, item, idx, m.related_project_id);
+      }
+    });
   };
 
   return (
@@ -249,7 +329,7 @@ export default function RecordMinutesPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     {m.decisions?.length > 0 && (
                       <span className="text-[10px] bg-gov-success-light text-gov-success px-2 py-0.5 rounded font-medium">
                         {m.decisions.length} decisions
@@ -260,6 +340,15 @@ export default function RecordMinutesPage() {
                         {m.action_items.length} action items
                       </span>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={(e) => { e.stopPropagation(); generateMinutesPDF(m); }}
+                      title="Export as PDF"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
                     {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                   </div>
                 </div>
@@ -314,17 +403,54 @@ export default function RecordMinutesPage() {
                   )}
                   {m.action_items?.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-gov-warning mb-1">Action Items</p>
-                      <ul className="space-y-1">
-                        {m.action_items.map((a: string, j: number) => (
-                          <li key={j} className="text-xs text-foreground flex items-start gap-1.5">
-                            <Clock className="h-3 w-3 text-gov-warning shrink-0 mt-0.5" />
-                            {a}
-                          </li>
-                        ))}
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-gov-warning">Action Items</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 text-[10px] px-2"
+                          onClick={() => handleConvertAll(m)}
+                        >
+                          <ClipboardList className="h-3 w-3 mr-1" />
+                          Convert All to Tasks
+                        </Button>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {m.action_items.map((a: string, j: number) => {
+                          const key = `${m.id}-${j}`;
+                          const isConverted = convertedItems.has(key);
+                          return (
+                            <li key={j} className="text-xs text-foreground flex items-center gap-1.5">
+                              <Clock className="h-3 w-3 text-gov-warning shrink-0" />
+                              <span className="flex-1">{a}</span>
+                              {isConverted ? (
+                                <span className="text-[10px] text-gov-success font-medium flex items-center gap-0.5">
+                                  <CheckCircle2 className="h-3 w-3" /> Created
+                                </span>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 text-[10px] px-1.5 text-primary hover:text-primary"
+                                  onClick={() => handleConvertToTask(m.id, a, j, m.related_project_id)}
+                                >
+                                  → Task
+                                </Button>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}
+
+                  {/* Export button inside expanded view */}
+                  <div className="pt-2 border-t border-border flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => generateMinutesPDF(m)}>
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Export as PDF
+                    </Button>
+                  </div>
                 </motion.div>
               )}
             </motion.div>
