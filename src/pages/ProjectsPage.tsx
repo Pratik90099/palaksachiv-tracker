@@ -1,18 +1,21 @@
 import { useState } from "react";
-import { useProjects, useDeleteProject } from "@/hooks/use-data";
+import { useProjects, useDeleteProject, useProjectCategories, useProjectTags } from "@/hooks/use-data";
 import { useRoleFilter } from "@/hooks/use-role-filter";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
-import { Plus, Download, Search, Edit2, Trash2, ClipboardPlus, MapPin, Building2, Tag } from "lucide-react";
+import { Plus, Download, Search, Edit2, Trash2, ClipboardPlus, MapPin, Building2, Tag, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import type { ActionableStatus, Priority } from "@/lib/mock-data";
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects();
+  const { data: categories } = useProjectCategories();
+  const { data: tags } = useProjectTags();
   const { filterProjects } = useRoleFilter();
   const deleteProject = useDeleteProject();
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,9 +23,16 @@ export default function ProjectsPage() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editProject, setEditProject] = useState<any>(null);
   const [taskProjectId, setTaskProjectId] = useState<string>("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterTag, setFilterTag] = useState("all");
 
   const filtered = filterProjects(projects || []).filter((p: any) => {
     if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (filterCategory !== "all" && p.category !== filterCategory) return false;
+    if (filterTag !== "all") {
+      const projectTags = p.project_tag_assignments?.map((pt: any) => pt.project_tags?.name).filter(Boolean) || [];
+      if (!projectTags.includes(filterTag)) return false;
+    }
     return true;
   });
 
@@ -54,14 +64,40 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <div className="gov-card flex items-center gap-3">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="border-0 bg-transparent focus-visible:ring-0 text-sm"
-        />
+      {/* Search + Filters */}
+      <div className="gov-card space-y-3">
+        <div className="flex items-center gap-3">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search projects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="border-0 bg-transparent focus-visible:ring-0 text-sm"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="All Categories" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterTag} onValueChange={setFilterTag}>
+            <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="All Tags" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tags</SelectItem>
+              {tags?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {(filterCategory !== "all" || filterTag !== "all") && (
+            <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={() => { setFilterCategory("all"); setFilterTag("all"); }}>
+              Clear filters
+            </Button>
+          )}
+          <span className="ml-auto text-[10px] text-muted-foreground">{filtered.length} results</span>
+        </div>
       </div>
 
       {isLoading ? (

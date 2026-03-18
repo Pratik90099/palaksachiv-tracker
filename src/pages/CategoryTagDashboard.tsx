@@ -3,9 +3,21 @@ import { useProjects, useProjectCategories, useProjectTags } from "@/hooks/use-d
 import { useRoleFilter } from "@/hooks/use-role-filter";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tag, FolderKanban, BarChart3, MapPin, Building2 } from "lucide-react";
+import { Tag, FolderKanban, MapPin, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { ActionableStatus, Priority } from "@/lib/mock-data";
+
+const CHART_COLORS = [
+  "hsl(220, 70%, 22%)",
+  "hsl(152, 60%, 40%)",
+  "hsl(38, 92%, 50%)",
+  "hsl(0, 72%, 51%)",
+  "hsl(210, 80%, 52%)",
+  "hsl(174, 60%, 40%)",
+  "hsl(24, 85%, 55%)",
+  "hsl(42, 92%, 50%)",
+];
 
 export default function CategoryTagDashboard() {
   const { data: projects, isLoading } = useProjects();
@@ -43,11 +55,12 @@ export default function CategoryTagDashboard() {
   });
 
   const getStatusCounts = (items: any[]) => {
-    const counts = { completed: 0, in_progress: 0, overdue: 0, total: items.length };
+    const counts = { completed: 0, in_progress: 0, overdue: 0, not_started: 0, total: items.length };
     items.forEach((p: any) => {
       if (p.status === "closed" || p.status === "completed_pending_closure") counts.completed++;
       else if (p.status === "in_progress" || p.status === "on_track") counts.in_progress++;
       else if (p.status === "overdue" || p.status === "at_risk") counts.overdue++;
+      else counts.not_started++;
     });
     return counts;
   };
@@ -59,12 +72,29 @@ export default function CategoryTagDashboard() {
     ? Object.entries(grouped)
     : Object.entries(grouped).filter(([k]) => k === filterKey);
 
+  // Chart data
+  const pieData = Object.entries(grouped).map(([name, items]) => ({
+    name,
+    value: items.length,
+  }));
+
+  const barData = Object.entries(grouped).map(([name, items]) => {
+    const counts = getStatusCounts(items);
+    return {
+      name: name.length > 12 ? name.slice(0, 12) + "…" : name,
+      "In Progress": counts.in_progress,
+      "Completed": counts.completed,
+      "Overdue": counts.overdue,
+      "Not Started": counts.not_started,
+    };
+  });
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground font-display">Category & Tag Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">View projects grouped by category or tag</p>
+          <p className="text-sm text-muted-foreground mt-1">Visual analytics for projects by category or tag</p>
         </div>
       </div>
 
@@ -72,17 +102,14 @@ export default function CategoryTagDashboard() {
       <div className="gov-card flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-muted-foreground">View by:</label>
-          <Select value={viewMode} onValueChange={(v) => { setViewMode(v as any); }}>
-            <SelectTrigger className="w-[140px] text-sm">
-              <SelectValue />
-            </SelectTrigger>
+          <Select value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
+            <SelectTrigger className="w-[140px] text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="category"><span className="flex items-center gap-1"><FolderKanban className="h-3 w-3" /> Category</span></SelectItem>
               <SelectItem value="tag"><span className="flex items-center gap-1"><Tag className="h-3 w-3" /> Tag</span></SelectItem>
             </SelectContent>
           </Select>
         </div>
-
         {viewMode === "category" && (
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">Filter:</label>
@@ -95,7 +122,6 @@ export default function CategoryTagDashboard() {
             </Select>
           </div>
         )}
-
         {viewMode === "tag" && (
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">Filter:</label>
@@ -108,11 +134,44 @@ export default function CategoryTagDashboard() {
             </Select>
           </div>
         )}
-
-        <div className="ml-auto text-xs text-muted-foreground">
-          {filtered.length} total projects
-        </div>
+        <div className="ml-auto text-xs text-muted-foreground">{filtered.length} total projects</div>
       </div>
+
+      {/* Charts */}
+      {pieData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="gov-card-elevated p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Distribution by {viewMode === "category" ? "Category" : "Tag"}</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} innerRadius={45} dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                  {pieData.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="gov-card-elevated p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Status Breakdown</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={barData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 88%)" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="In Progress" fill="hsl(210, 80%, 52%)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="Completed" fill="hsl(152, 60%, 40%)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="Overdue" fill="hsl(0, 72%, 51%)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="Not Started" fill="hsl(220, 10%, 60%)" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </motion.div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -158,15 +217,8 @@ export default function CategoryTagDashboard() {
                   const districtNames = project.project_districts?.map((pd: any) => pd.districts?.name).filter(Boolean) || [];
                   const deptNames = project.project_departments?.map((pd: any) => pd.departments?.short_name || pd.departments?.name).filter(Boolean) || [];
                   const tagNames = project.project_tag_assignments?.map((pt: any) => pt.project_tags?.name).filter(Boolean) || [];
-
                   return (
-                    <motion.div
-                      key={project.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="gov-card p-3"
-                    >
+                    <motion.div key={project.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="gov-card p-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -182,14 +234,10 @@ export default function CategoryTagDashboard() {
                               </span>
                             ))}
                             {districtNames.length > 0 && (
-                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                <MapPin className="h-3 w-3" /> {districtNames.join(", ")}
-                              </span>
+                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><MapPin className="h-3 w-3" /> {districtNames.join(", ")}</span>
                             )}
                             {deptNames.length > 0 && (
-                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                <Building2 className="h-3 w-3" /> {deptNames.join(", ")}
-                              </span>
+                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><Building2 className="h-3 w-3" /> {deptNames.join(", ")}</span>
                             )}
                             <span className="text-[10px] text-muted-foreground">📂 {project.category}</span>
                           </div>

@@ -1,7 +1,7 @@
 import {
   Home, MapPin, ClipboardList, AlertTriangle, Users, FileText,
   Settings, LogOut, Shield, Bell, BarChart3, Globe, Calendar, Building2,
-  FolderKanban, User, HelpCircle, Tag
+  FolderKanban, User, HelpCircle, Tag, Activity, Trophy
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -34,6 +34,8 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Alerts", url: "/alerts", icon: Bell, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo"] },
   { title: "MIS Reports", url: "/reports", icon: FileText, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary"] },
   { title: "Departments", url: "/departments", icon: Building2, roles: ["chief_secretary", "cmo", "department_secretary"] },
+  { title: "Governance Scorecard", url: "/governance-scorecard", icon: Trophy, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary", "system_admin"] },
+  { title: "Integration Health", url: "/integration-health", icon: Activity, roles: ["chief_secretary", "cmo", "system_admin"] },
   { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },
   { title: "My Profile", url: "/profile", icon: User, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Notifications", url: "/notifications", icon: Bell, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
