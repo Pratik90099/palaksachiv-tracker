@@ -4,7 +4,7 @@ import { useRoleFilter } from "@/hooks/use-role-filter";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
-import { Plus, Download, Search, Edit2, Trash2, ClipboardPlus, MapPin, Building2 } from "lucide-react";
+import { Plus, Download, Search, Edit2, Trash2, ClipboardPlus, MapPin, Building2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
