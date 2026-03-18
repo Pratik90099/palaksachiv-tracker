@@ -68,10 +68,10 @@ const MOCK_USERS: Record<UserRole, User> = {
   },
   system_admin: {
     id: "admin-001",
-    name: "System Administrator",
-    designation: "IT/NIC Team",
+    name: "CS Office Team",
+    designation: "Chief Secretary's Office",
     role: "system_admin",
-    email: "admin@maharashtra.gov.in",
+    email: "cs.office@maharashtra.gov.in",
   },
 };
 
