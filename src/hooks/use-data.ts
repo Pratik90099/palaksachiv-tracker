@@ -95,7 +95,8 @@ export function useProjects() {
         .select(`
           *,
           project_districts(district_id, districts(id, name, division)),
-          project_departments(department_id, departments(id, name, short_name))
+          project_departments(department_id, departments(id, name, short_name)),
+          project_tag_assignments(tag_id, project_tags(id, name))
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
