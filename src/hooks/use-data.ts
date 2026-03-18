@@ -1,6 +1,60 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Project Categories
+export function useProjectCategories() {
+  return useQuery({
+    queryKey: ["project_categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_categories")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCreateProjectCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; description?: string; color?: string }) => {
+      const { data, error } = await supabase.from("project_categories").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project_categories"] }); },
+  });
+}
+
+// Project Tags
+export function useProjectTags() {
+  return useQuery({
+    queryKey: ["project_tags"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_tags")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCreateProjectTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string }) => {
+      const { data, error } = await supabase.from("project_tags").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project_tags"] }); },
+  });
+}
+
 // Districts
 export function useDistricts() {
   return useQuery({
@@ -41,7 +95,8 @@ export function useProjects() {
         .select(`
           *,
           project_districts(district_id, districts(id, name, division)),
-          project_departments(department_id, departments(id, name, short_name))
+          project_departments(department_id, departments(id, name, short_name)),
+          project_tag_assignments(tag_id, project_tags(id, name))
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -119,8 +174,9 @@ export function useCreateProject() {
       target_date?: string;
       district_ids: string[];
       department_ids: string[];
+      tag_ids?: string[];
     }) => {
-      const { district_ids, department_ids, ...projectData } = input;
+      const { district_ids, department_ids, tag_ids, ...projectData } = input;
       const { data: project, error } = await supabase
         .from("projects")
         .insert(projectData)
@@ -140,6 +196,13 @@ export function useCreateProject() {
           department_ids.map((did) => ({ project_id: project.id, department_id: did }))
         );
         if (dpErr) throw dpErr;
+      }
+
+      if (tag_ids && tag_ids.length > 0) {
+        const { error: tErr } = await supabase.from("project_tag_assignments").insert(
+          tag_ids.map((tid) => ({ project_id: project.id, tag_id: tid }))
+        );
+        if (tErr) throw tErr;
       }
 
       return project;
@@ -166,8 +229,9 @@ export function useUpdateProject() {
       target_date?: string;
       district_ids?: string[];
       department_ids?: string[];
+      tag_ids?: string[];
     }) => {
-      const { id, district_ids, department_ids, ...projectData } = input;
+      const { id, district_ids, department_ids, tag_ids, ...projectData } = input;
       const { error } = await supabase.from("projects").update(projectData).eq("id", id);
       if (error) throw error;
 
@@ -188,6 +252,16 @@ export function useUpdateProject() {
             department_ids.map((did) => ({ project_id: id, department_id: did }))
           );
           if (dpErr) throw dpErr;
+        }
+      }
+
+      if (tag_ids !== undefined) {
+        await supabase.from("project_tag_assignments").delete().eq("project_id", id);
+        if (tag_ids.length > 0) {
+          const { error: tErr } = await supabase.from("project_tag_assignments").insert(
+            tag_ids.map((tid) => ({ project_id: id, tag_id: tid }))
+          );
+          if (tErr) throw tErr;
         }
       }
     },

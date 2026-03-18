@@ -4,7 +4,7 @@ import { useRoleFilter } from "@/hooks/use-role-filter";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
-import { Plus, Download, Search, Edit2, Trash2, ClipboardPlus, MapPin, Building2 } from "lucide-react";
+import { Plus, Download, Search, Edit2, Trash2, ClipboardPlus, MapPin, Building2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
@@ -71,6 +71,7 @@ export default function ProjectsPage() {
           {filtered.map((project, i) => {
             const districtNames = project.project_districts?.map((pd: any) => pd.districts?.name).filter(Boolean) || [];
             const deptNames = project.project_departments?.map((pd: any) => pd.departments?.short_name || pd.departments?.name).filter(Boolean) || [];
+            const tagNames = (project as any).project_tag_assignments?.map((pt: any) => pt.project_tags?.name).filter(Boolean) || [];
 
             return (
               <motion.div
@@ -91,6 +92,11 @@ export default function ProjectsPage() {
                     <h3 className="text-sm font-semibold text-foreground">{project.title}</h3>
                     {project.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{project.description}</p>}
                     <div className="flex flex-wrap gap-3 mt-2">
+                      {tagNames.length > 0 && tagNames.map((t: string) => (
+                        <span key={t} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                          <Tag className="h-2.5 w-2.5" /> {t}
+                        </span>
+                      ))}
                       {districtNames.length > 0 && (
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <MapPin className="h-3 w-3" /> {districtNames.join(", ")}
