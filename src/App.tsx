@@ -26,6 +26,7 @@ import SettingsPage from "./pages/SettingsPage";
 import CategoryTagDashboard from "./pages/CategoryTagDashboard";
 import IntegrationHealthPage from "./pages/IntegrationHealthPage";
 import GovernanceScorecardPage from "./pages/GovernanceScorecardPage";
+import RecordMinutesPage from "./pages/RecordMinutesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ function AppRoutes() {
       <Route path="/category-dashboard" element={<ProtectedRoute><CategoryTagDashboard /></ProtectedRoute>} />
       <Route path="/integration-health" element={<ProtectedRoute><IntegrationHealthPage /></ProtectedRoute>} />
       <Route path="/governance-scorecard" element={<ProtectedRoute><GovernanceScorecardPage /></ProtectedRoute>} />
+      <Route path="/meeting-minutes" element={<ProtectedRoute><RecordMinutesPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

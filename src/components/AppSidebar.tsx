@@ -1,7 +1,7 @@
 import {
   Home, MapPin, ClipboardList, AlertTriangle, Users, FileText,
   Settings, LogOut, Shield, Bell, BarChart3, Globe, Calendar, Building2,
-  FolderKanban, User, HelpCircle, Tag, Activity, Trophy
+  FolderKanban, User, HelpCircle, Tag, Activity, Trophy, BookOpen
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -36,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Departments", url: "/departments", icon: Building2, roles: ["chief_secretary", "cmo", "department_secretary"] },
   { title: "Governance Scorecard", url: "/governance-scorecard", icon: Trophy, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary", "system_admin"] },
   { title: "Integration Health", url: "/integration-health", icon: Activity, roles: ["chief_secretary", "cmo", "system_admin"] },
+  { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["system_admin", "chief_secretary"] },
   { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },
   { title: "My Profile", url: "/profile", icon: User, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Notifications", url: "/notifications", icon: Bell, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
@@ -58,7 +59,7 @@ export function AppSidebar() {
     user?.role === "district_collector" ? "District Collector" :
     user?.role === "divisional_commissioner" ? "Div. Commissioner" :
     user?.role === "chief_secretary" ? "Chief Secretary" :
-    user?.role === "cmo" ? "CMO" : "Admin";
+    user?.role === "cmo" ? "CMO" : "CS Office";
 
   return (
     <Sidebar collapsible="icon">
