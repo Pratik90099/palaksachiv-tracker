@@ -64,6 +64,7 @@ function AppRoutes() {
       <Route path="/category-dashboard" element={<ProtectedRoute><CategoryTagDashboard /></ProtectedRoute>} />
       <Route path="/integration-health" element={<ProtectedRoute><IntegrationHealthPage /></ProtectedRoute>} />
       <Route path="/governance-scorecard" element={<ProtectedRoute><GovernanceScorecardPage /></ProtectedRoute>} />
+      <Route path="/meeting-minutes" element={<ProtectedRoute><RecordMinutesPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
