@@ -15,6 +15,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (role: UserRole) => void;
+  loginWithEmail: (email: string, password: string) => { success: boolean; error?: string };
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -75,6 +76,12 @@ const MOCK_USERS: Record<UserRole, User> = {
   },
 };
 
+// Authorized CS Office users with credentials
+export const CS_OFFICE_USERS: { name: string; email: string; password: string; id: string }[] = [
+  { id: "cso-001", name: "Pratik Bavi", email: "bavipratik@gmail.com", password: "cso@2026" },
+  { id: "cso-002", name: "Rishikesh Shirke", email: "rishishirke65@gmail.com", password: "cso@2026" },
+];
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -84,12 +91,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(MOCK_USERS[role]);
   };
 
+  const loginWithEmail = (email: string, password: string): { success: boolean; error?: string } => {
+    const found = CS_OFFICE_USERS.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    );
+    if (!found) {
+      return { success: false, error: "Invalid email or password" };
+    }
+    setUser({
+      id: found.id,
+      name: found.name,
+      designation: "Chief Secretary's Office",
+      role: "system_admin",
+      email: found.email,
+    });
+    return { success: true };
+  };
+
   const logout = () => {
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, loginWithEmail, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
