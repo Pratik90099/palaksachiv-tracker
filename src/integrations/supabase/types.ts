@@ -56,6 +56,42 @@ export type Database = {
         }
         Relationships: []
       }
+      document_uploads: {
+        Row: {
+          ai_result: Json | null
+          created_at: string
+          file_name: string
+          file_size: number
+          file_type: string
+          id: string
+          processing_mode: string
+          storage_path: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          ai_result?: Json | null
+          created_at?: string
+          file_name: string
+          file_size?: number
+          file_type: string
+          id?: string
+          processing_mode?: string
+          storage_path?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          ai_result?: Json | null
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          processing_mode?: string
+          storage_path?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       guardian_secretaries: {
         Row: {
           created_at: string

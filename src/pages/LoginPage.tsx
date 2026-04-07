@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, CS_OFFICE_EMAILS } from "@/lib/auth-context";
 import { USER_ROLES, UserRole } from "@/lib/mock-data";
 import { Shield, ArrowRight, Lock, Building2, Globe2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LoginPage() {
-  const { login, loginWithEmail } = useAuth();
+  const { login, loginWithCSOData } = useAuth();
   const navigate = useNavigate();
   const [showCSOLogin, setShowCSOLogin] = useState(false);
   const [email, setEmail] = useState("");
@@ -27,19 +28,42 @@ export default function LoginPage() {
     navigate("/dashboard");
   };
 
-  const handleCSOLogin = () => {
+  const handleCSOLogin = async () => {
+    // Input validation
+    if (!email.trim() || email.length > 255) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    if (!password || password.length > 128) {
+      setError("Please enter a valid password");
+      return;
+    }
+
     setLoading(true);
     setError("");
-    // Simulate slight delay
-    setTimeout(() => {
-      const result = loginWithEmail(email, password);
-      if (result.success) {
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("authenticate-cso", {
+        body: { email: email.trim(), password },
+      });
+
+      if (fnError) {
+        setError("Authentication service unavailable. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (data?.success && data?.user) {
+        loginWithCSOData(data.user);
         navigate("/dashboard");
       } else {
-        setError(result.error || "Login failed");
+        setError(data?.error || "Invalid email or password");
       }
+    } catch {
+      setError("Authentication failed. Please try again.");
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -223,6 +247,7 @@ export default function LoginPage() {
                         onChange={(e) => { setEmail(e.target.value); setError(""); }}
                         placeholder="your.email@gmail.com"
                         className="pl-10"
+                        maxLength={255}
                         onKeyDown={(e) => e.key === "Enter" && handleCSOLogin()}
                       />
                     </div>
@@ -238,6 +263,7 @@ export default function LoginPage() {
                         onChange={(e) => { setPassword(e.target.value); setError(""); }}
                         placeholder="••••••••"
                         className="pl-10"
+                        maxLength={128}
                         onKeyDown={(e) => e.key === "Enter" && handleCSOLogin()}
                       />
                     </div>
@@ -264,9 +290,9 @@ export default function LoginPage() {
 
                 <div className="mt-6 p-3 rounded-lg bg-muted/50 border border-border">
                   <p className="text-[10px] text-muted-foreground font-semibold mb-1">Authorized Users:</p>
-                  <p className="text-[10px] text-muted-foreground">• Pratik Bavi — bavipratik@gmail.com</p>
-                  <p className="text-[10px] text-muted-foreground">• Rishikesh Shirke — rishishirke65@gmail.com</p>
-                  <p className="text-[10px] text-muted-foreground mt-1 italic">Default password: cso@2026</p>
+                  {CS_OFFICE_EMAILS.map((u) => (
+                    <p key={u.email} className="text-[10px] text-muted-foreground">• {u.name} — {u.email}</p>
+                  ))}
                 </div>
               </motion.div>
             )}

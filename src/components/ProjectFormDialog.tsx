@@ -102,6 +102,14 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
       toast.error("Title is required");
       return;
     }
+    if (form.title.length > 255) {
+      toast.error("Title must be under 255 characters");
+      return;
+    }
+    if (form.description.length > 5000) {
+      toast.error("Description must be under 5000 characters");
+      return;
+    }
     if (form.district_ids.length === 0) {
       toast.error("Select at least one district");
       return;
@@ -131,7 +139,7 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Title *</label>
-            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Project title" />
+            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Project title" maxLength={255} />
           </div>
 
           <div className="space-y-1.5">
