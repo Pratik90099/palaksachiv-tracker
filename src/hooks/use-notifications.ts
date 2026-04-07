@@ -34,7 +34,8 @@ export function useNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [qc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const unreadCount = (query.data || []).filter((n) => !n.is_read).length;
 
