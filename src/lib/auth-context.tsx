@@ -15,7 +15,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (role: UserRole) => void;
-  loginWithEmail: (email: string, password: string) => { success: boolean; error?: string };
+  loginWithCSOData: (userData: { id: string; name: string; email: string; designation: string; role: string }) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -76,10 +76,10 @@ const MOCK_USERS: Record<UserRole, User> = {
   },
 };
 
-// Authorized CS Office users with credentials
-export const CS_OFFICE_USERS: { name: string; email: string; password: string; id: string }[] = [
-  { id: "cso-001", name: "Pratik Bavi", email: "bavipratik@gmail.com", password: "cso@2026" },
-  { id: "cso-002", name: "Rishikesh Shirke", email: "rishishirke65@gmail.com", password: "cso@2026" },
+// Authorized CS Office user emails (no passwords stored client-side)
+export const CS_OFFICE_EMAILS = [
+  { name: "Pratik Bavi", email: "bavipratik@gmail.com" },
+  { name: "Rishikesh Shirke", email: "rishishirke65@gmail.com" },
 ];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -91,21 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(MOCK_USERS[role]);
   };
 
-  const loginWithEmail = (email: string, password: string): { success: boolean; error?: string } => {
-    const found = CS_OFFICE_USERS.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-    if (!found) {
-      return { success: false, error: "Invalid email or password" };
-    }
+  const loginWithCSOData = (userData: { id: string; name: string; email: string; designation: string; role: string }) => {
     setUser({
-      id: found.id,
-      name: found.name,
-      designation: "Chief Secretary's Office",
-      role: "system_admin",
-      email: found.email,
+      id: userData.id,
+      name: userData.name,
+      designation: userData.designation,
+      role: userData.role as UserRole,
+      email: userData.email,
     });
-    return { success: true };
   };
 
   const logout = () => {
@@ -113,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithEmail, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, loginWithCSOData, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
