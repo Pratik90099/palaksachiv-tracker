@@ -54,11 +54,30 @@ function useCreateMinutes() {
   });
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function generateMinutesPDF(m: any) {
+  const safeTitle = escapeHtml(m.title || "");
+  const safeVenue = escapeHtml(m.venue || "");
+  const safeChair = escapeHtml(m.chaired_by || "");
+  const safeAgenda = escapeHtml(m.agenda || "");
+  const safeMinutes = escapeHtml(m.minutes_text || "").replace(/\n/g, "<br/>");
+  const safeAttendees = (m.attendees || []).map((a: string) => escapeHtml(a));
+  const safeDecisions = (m.decisions || []).map((d: string) => escapeHtml(d));
+  const safeActions = (m.action_items || []).map((a: string) => escapeHtml(a));
+  const safeProjectTitle = m.projects ? escapeHtml(m.projects.title || "") : "";
+
   const html = `
     <!DOCTYPE html>
     <html><head><meta charset="utf-8">
-    <title>${m.title}</title>
+    <title>${safeTitle}</title>
     <style>
       body { font-family: 'Georgia', serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #1a1a2e; }
       .header { text-align: center; border-bottom: 3px double #1a1a2e; padding-bottom: 20px; margin-bottom: 30px; }
@@ -76,15 +95,15 @@ function generateMinutesPDF(m: any) {
     <div class="header">
       <h1>Government of Maharashtra</h1>
       <p class="meta">Chief Secretary's Office</p>
-      <p class="subtitle">${m.title}</p>
-      <p class="meta">Date: ${format(new Date(m.meeting_date), "dd MMMM yyyy")}${m.venue ? ` | Venue: ${m.venue}` : ""}${m.chaired_by ? ` | Chaired by: ${m.chaired_by}` : ""}</p>
+      <p class="subtitle">${safeTitle}</p>
+      <p class="meta">Date: ${format(new Date(m.meeting_date), "dd MMMM yyyy")}${safeVenue ? ` | Venue: ${safeVenue}` : ""}${safeChair ? ` | Chaired by: ${safeChair}` : ""}</p>
     </div>
-    ${m.attendees?.length ? `<div class="section"><h3>Attendees</h3><div class="attendee-list">${m.attendees.map((a: string) => `<span>• ${a}</span>`).join("")}</div></div>` : ""}
-    ${m.agenda ? `<div class="section"><h3>Agenda</h3><p>${m.agenda}</p></div>` : ""}
-    <div class="section"><h3>Minutes of the Meeting</h3><p>${m.minutes_text.replace(/\n/g, "<br/>")}</p></div>
-    ${m.decisions?.length ? `<div class="section"><h3>Key Decisions</h3><ul>${m.decisions.map((d: string) => `<li>${d}</li>`).join("")}</ul></div>` : ""}
-    ${m.action_items?.length ? `<div class="section"><h3>Action Items</h3><ul>${m.action_items.map((a: string) => `<li>${a}</li>`).join("")}</ul></div>` : ""}
-    ${m.projects ? `<div class="section"><h3>Related Project</h3><p>${m.projects.title}</p></div>` : ""}
+    ${safeAttendees.length ? `<div class="section"><h3>Attendees</h3><div class="attendee-list">${safeAttendees.map((a: string) => `<span>• ${a}</span>`).join("")}</div></div>` : ""}
+    ${safeAgenda ? `<div class="section"><h3>Agenda</h3><p>${safeAgenda}</p></div>` : ""}
+    <div class="section"><h3>Minutes of the Meeting</h3><p>${safeMinutes}</p></div>
+    ${safeDecisions.length ? `<div class="section"><h3>Key Decisions</h3><ul>${safeDecisions.map((d: string) => `<li>${d}</li>`).join("")}</ul></div>` : ""}
+    ${safeActions.length ? `<div class="section"><h3>Action Items</h3><ul>${safeActions.map((a: string) => `<li>${a}</li>`).join("")}</ul></div>` : ""}
+    ${safeProjectTitle ? `<div class="section"><h3>Related Project</h3><p>${safeProjectTitle}</p></div>` : ""}
     <div class="footer">
       <p>This is a system-generated document from GS Portal — Chief Secretary's Office, Government of Maharashtra</p>
       <p>Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")}</p>
@@ -126,6 +145,14 @@ export default function RecordMinutesPage() {
   const handleSubmit = () => {
     if (!form.title || !form.minutes_text) {
       toast.error("Title and minutes text are required");
+      return;
+    }
+    if (form.title.length > 255) {
+      toast.error("Title must be under 255 characters");
+      return;
+    }
+    if (form.minutes_text.length > 10000) {
+      toast.error("Minutes text must be under 10,000 characters");
       return;
     }
     createMinutes.mutate({
