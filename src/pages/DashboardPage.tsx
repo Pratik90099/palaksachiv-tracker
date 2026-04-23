@@ -125,7 +125,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 gov-card-elevated">
           <h3 className="gov-section-title mb-4">Quarterly Trends</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={QUARTERLY_DATA} barGap={4}>
+            <BarChart data={quarterlyData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 88%)" />
               <XAxis dataKey="quarter" tick={{ fontSize: 11 }} stroke="hsl(220, 15%, 46%)" />
               <YAxis tick={{ fontSize: 11 }} stroke="hsl(220, 15%, 46%)" />
@@ -210,7 +210,10 @@ export default function DashboardPage() {
           <div className="gov-card-elevated">
             <h3 className="gov-section-title mb-4">Department Performance</h3>
             <div className="space-y-3">
-              {DEPARTMENT_PERFORMANCE.map((dept) => (
+              {deptPerformance.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No department data yet</p>
+              )}
+              {deptPerformance.map((dept) => (
                 <div key={dept.department} className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">{dept.department}</span>
