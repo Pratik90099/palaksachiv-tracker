@@ -71,3 +71,68 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+---
+
+## Moving to an External PostgreSQL Database
+
+This project ships with a portable, consolidated schema at
+**`docs/db/full_schema.sql`** that replays the entire database structure
+(tables, RLS policies, helper functions, indexes) on any vanilla
+PostgreSQL 14+ instance — RDS, Cloud SQL, Azure Database, or on-prem.
+
+### 1. Replay the schema
+
+```bash
+psql "$EXTERNAL_DATABASE_URL" -f docs/db/full_schema.sql
+```
+
+The script uses only the `pgcrypto` extension. RLS policies follow the
+"public read, authenticated write" pattern. If your auth provider uses
+role names other than `anon` / `authenticated`, edit the `DO $$ … $$`
+block at the bottom of the file.
+
+### 2. Re-point environment variables
+
+Update `.env` (or your hosting platform's secrets) with:
+
+| Variable | Purpose |
+|---|---|
+| `VITE_SUPABASE_URL` | Your new Postgres REST gateway URL (PostgREST, Hasura, or a custom API) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Public anon key for client reads |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key used by edge functions for elevated writes |
+| `LOVABLE_API_KEY` | (Edge function) Required if you keep the AI Insights / document processing functions |
+| `VITE_DEMO_MODE` | Set to `"false"` in production to disable demo role logins |
+
+### 3. Re-create the `documents` storage bucket
+
+The `process-document` edge function uploads PDFs/CSVs to a private
+`documents` bucket. On your new host:
+
+- **AWS S3** — create a private bucket, generate an access key pair, update the
+  upload helper to use `@aws-sdk/client-s3`.
+- **MinIO / self-hosted** — same approach as S3 with a custom endpoint.
+- **Azure Blob** — use `@azure/storage-blob` with a SAS token.
+
+Update the storage call sites in `supabase/functions/process-document/index.ts`.
+
+### 4. Port the four edge functions
+
+| Function | Runtime | Action |
+|---|---|---|
+| `authenticate-cso` | Deno | Stateless email/password check — port to Node/Workers if needed |
+| `process-document` | Deno | Re-point storage SDK |
+| `generate-insights` | Deno | Re-point AI gateway URL |
+| `parichay-callback` | Deno | Add real OAuth handshake when production credentials arrive |
+
+### 5. e-Parichay SSO swap-point
+
+When the government issues OAuth client credentials, only one file changes:
+`supabase/functions/parichay-callback/index.ts`. The rest of the auth
+pipeline (officer directory, `external_identities` mapping, `loginWithParichay`
+adapter) is already wired and waiting.
+
+CS Office can pre-map every officer's Parichay UID via **User Management →
+Add / Edit Officer → Parichay UID** today, so the moment SSO is enabled
+those officers will auto-login on their first visit.
+

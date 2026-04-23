@@ -37,6 +37,8 @@ export function OfficerFormDialog({ open, onOpenChange, editOfficer }: OfficerFo
     district_id: "",
     department_id: "",
     is_active: true,
+    parichay_uid: "",
+    is_cso_admin: false,
   });
 
   useEffect(() => {
@@ -49,9 +51,11 @@ export function OfficerFormDialog({ open, onOpenChange, editOfficer }: OfficerFo
         district_id: editOfficer.district_id || "",
         department_id: editOfficer.department_id || "",
         is_active: editOfficer.is_active ?? true,
+        parichay_uid: editOfficer.parichay_uid || "",
+        is_cso_admin: editOfficer.is_cso_admin ?? false,
       });
     } else {
-      setForm({ name: "", designation: "", email: "", role: "department_secretary", district_id: "", department_id: "", is_active: true });
+      setForm({ name: "", designation: "", email: "", role: "department_secretary", district_id: "", department_id: "", is_active: true, parichay_uid: "", is_cso_admin: false });
     }
   }, [editOfficer, open]);
 
@@ -59,6 +63,7 @@ export function OfficerFormDialog({ open, onOpenChange, editOfficer }: OfficerFo
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     if (form.name.length > 200) { toast.error("Name must be under 200 characters"); return; }
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { toast.error("Invalid email"); return; }
+    if (form.parichay_uid && form.parichay_uid.length > 100) { toast.error("Parichay UID must be under 100 characters"); return; }
 
     const payload = {
       name: form.name.trim(),
@@ -68,6 +73,8 @@ export function OfficerFormDialog({ open, onOpenChange, editOfficer }: OfficerFo
       district_id: form.district_id || null,
       department_id: form.department_id || null,
       is_active: form.is_active,
+      parichay_uid: form.parichay_uid.trim() || null,
+      is_cso_admin: form.is_cso_admin,
     };
 
     try {
@@ -134,10 +141,28 @@ export function OfficerFormDialog({ open, onOpenChange, editOfficer }: OfficerFo
               </Select>
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
-            Active
-          </label>
+          <div>
+            <Label className="text-xs">Parichay UID (optional)</Label>
+            <Input
+              value={form.parichay_uid}
+              onChange={(e) => setForm({ ...form, parichay_uid: e.target.value })}
+              placeholder="Pre-map for SSO auto-login when Parichay goes live"
+              maxLength={100}
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              When entered, this officer will auto-login via Parichay SSO once production credentials are wired.
+            </p>
+          </div>
+          <div className="space-y-2 pt-1">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+              Active
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_cso_admin} onChange={(e) => setForm({ ...form, is_cso_admin: e.target.checked })} />
+              Mark as CS Office Admin (full system access)
+            </label>
+          </div>
           <div className="flex gap-2 pt-2 justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button onClick={handleSubmit} disabled={createOfficer.isPending || updateOfficer.isPending}>

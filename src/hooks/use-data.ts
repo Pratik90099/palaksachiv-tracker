@@ -185,6 +185,8 @@ export function useCreateOfficer() {
       district_id?: string | null;
       department_id?: string | null;
       is_active?: boolean;
+      parichay_uid?: string | null;
+      is_cso_admin?: boolean;
     }) => {
       const { data, error } = await supabase.from("officers").insert(input).select().single();
       if (error) throw error;

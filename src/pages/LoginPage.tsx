@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { loginWithParichay, isDemoMode } from "@/lib/auth-adapter";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const { login, loginWithCSOData } = useAuth();
+  const { login, loginWithCSOData, setUserFromAdapter } = useAuth();
   const navigate = useNavigate();
   const [showCSOLogin, setShowCSOLogin] = useState(false);
   const [email, setEmail] = useState("");
@@ -39,14 +40,14 @@ export default function LoginPage() {
   const handleParichayLogin = async () => {
     setParichayLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("parichay-callback", { body: {} });
-      if (error || !data?.success) {
-        toast.info(data?.message || "Parichay SSO is awaiting production credentials.");
+      const result = await loginWithParichay();
+      if (result.ready && result.user) {
+        setUserFromAdapter(result.user);
+        toast.success(result.message);
+        navigate("/dashboard");
       } else {
-        toast.success("Parichay sign-in succeeded");
+        toast.info(result.message);
       }
-    } catch {
-      toast.info("Parichay SSO is awaiting production credentials.");
     } finally {
       setParichayLoading(false);
     }
@@ -58,8 +59,16 @@ export default function LoginPage() {
       setError("");
       return;
     }
-    login(role);
-    navigate("/dashboard");
+    if (!isDemoMode) {
+      toast.error("Demo role login is disabled in production. Please use Parichay SSO.");
+      return;
+    }
+    try {
+      login(role);
+      navigate("/dashboard");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const handleCSOLogin = async () => {

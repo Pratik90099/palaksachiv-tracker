@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/lib/auth-context";
-import { Bell, Search, X } from "lucide-react";
+import { Bell, Search, X, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -114,7 +114,7 @@ function GlobalSearch() {
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, viewingAs, realUser, stopImpersonating } = useAuth();
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
   const { data: tasks } = useTasks();
@@ -130,6 +130,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
+          {viewingAs && realUser && (
+            <div className="bg-gov-warning/15 border-b border-gov-warning/30 px-4 py-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-foreground">
+                <UserCog className="h-3.5 w-3.5 text-gov-warning" />
+                <span>
+                  Viewing as <strong>{user?.name}</strong> ({user?.role.replace(/_/g, " ")}) — signed in as {realUser.name}
+                </span>
+              </div>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={stopImpersonating}>
+                Return to my account
+              </Button>
+            </div>
+          )}
           <header className="h-14 flex items-center justify-between border-b border-border bg-card px-4" style={{ boxShadow: "var(--shadow-nav)" }}>
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
