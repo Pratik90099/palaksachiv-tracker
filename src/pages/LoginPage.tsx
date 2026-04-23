@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { USER_ROLES, UserRole } from "@/lib/mock-data";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const { login, loginWithCSOData } = useAuth();
@@ -17,6 +18,39 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [parichayLoading, setParichayLoading] = useState(false);
+  const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    // Live role counts from officers table
+    supabase
+      .from("officers")
+      .select("role")
+      .eq("is_active", true)
+      .then(({ data }) => {
+        const counts: Record<string, number> = {};
+        (data || []).forEach((o: any) => {
+          counts[o.role] = (counts[o.role] || 0) + 1;
+        });
+        setRoleCounts(counts);
+      });
+  }, []);
+
+  const handleParichayLogin = async () => {
+    setParichayLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("parichay-callback", { body: {} });
+      if (error || !data?.success) {
+        toast.info(data?.message || "Parichay SSO is awaiting production credentials.");
+      } else {
+        toast.success("Parichay sign-in succeeded");
+      }
+    } catch {
+      toast.info("Parichay SSO is awaiting production credentials.");
+    } finally {
+      setParichayLoading(false);
+    }
+  };
 
   const handleLogin = (role: UserRole) => {
     if (role === "system_admin") {
@@ -166,9 +200,13 @@ export default function LoginPage() {
                 </div>
 
                 {/* Parichay SSO button */}
-                <button className="w-full mb-6 py-3.5 rounded-lg font-semibold text-sm bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                <button
+                  onClick={handleParichayLogin}
+                  disabled={parichayLoading}
+                  className="w-full mb-6 py-3.5 rounded-lg font-semibold text-sm bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
+                >
                   <Lock className="h-4 w-4" />
-                  Sign in with Parichay SSO
+                  {parichayLoading ? "Contacting Parichay..." : "Sign in with Parichay SSO"}
                 </button>
 
                 <div className="flex items-center gap-3 mb-6">
@@ -178,33 +216,36 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  {USER_ROLES.map((role, i) => (
-                    <motion.button
-                      key={role.value}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 + i * 0.05 }}
-                      onClick={() => handleLogin(role.value)}
-                      className="w-full flex items-center justify-between p-3.5 rounded-lg border border-border bg-card hover:border-primary/30 hover:bg-secondary/50 transition-all group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-xs font-bold text-secondary-foreground">
-                          {role.count}
+                  {USER_ROLES.map((role, i) => {
+                    const count = roleCounts[role.value] || 0;
+                    return (
+                      <motion.button
+                        key={role.value}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + i * 0.05 }}
+                        onClick={() => handleLogin(role.value)}
+                        className="w-full flex items-center justify-between p-3.5 rounded-lg border border-border bg-card hover:border-primary/30 hover:bg-secondary/50 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-xs font-bold text-secondary-foreground">
+                            {count}
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-semibold text-foreground">{role.label}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {role.value === "system_admin" ? "Credential login required" : `${count} officer${count === 1 ? "" : "s"} on record`}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-left">
-                          <p className="text-sm font-semibold text-foreground">{role.label}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {role.value === "system_admin" ? "Credential login required" : `${role.count} user${role.count > 1 ? "s" : ""}`}
-                          </p>
-                        </div>
-                      </div>
-                      {role.value === "system_admin" ? (
-                        <Lock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      )}
-                    </motion.button>
-                  ))}
+                        {role.value === "system_admin" ? (
+                          <Lock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        )}
+                      </motion.button>
+                    );
+                  })}
                 </div>
 
                 <p className="text-[10px] text-muted-foreground text-center mt-6">

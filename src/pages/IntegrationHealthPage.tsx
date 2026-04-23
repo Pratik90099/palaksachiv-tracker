@@ -1,161 +1,238 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Activity, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Clock } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, Plus, Pencil, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
 
-interface IntegrationStatus {
+type Status = "planned" | "in_discussion" | "live" | "deprecated";
+
+interface Integration {
+  id: string;
   name: string;
-  platform: string;
-  lastSync: string;
-  recordsSynced: number;
-  errors: number;
-  status: "healthy" | "warning" | "error" | "stale";
-  uptime: number;
+  short_code: string | null;
+  description: string | null;
+  category: string | null;
+  status: Status;
+  owner: string | null;
+  notes: string | null;
+  display_order: number;
 }
 
-const INTEGRATIONS: IntegrationStatus[] = [
-  { name: "PRAGATI", platform: "PMO Portal", lastSync: "2026-03-18T09:15:00", recordsSynced: 342, errors: 0, status: "healthy", uptime: 99.9 },
-  { name: "CM War Room", platform: "State Dashboard", lastSync: "2026-03-18T09:10:00", recordsSynced: 1284, errors: 2, status: "warning", uptime: 98.5 },
-  { name: "PFMS", platform: "Finance Ministry", lastSync: "2026-03-18T08:45:00", recordsSynced: 5620, errors: 0, status: "healthy", uptime: 99.7 },
-  { name: "GEM Portal", platform: "Procurement", lastSync: "2026-03-18T07:30:00", recordsSynced: 891, errors: 0, status: "healthy", uptime: 99.2 },
-  { name: "e-Taal", platform: "Service Delivery", lastSync: "2026-03-17T22:00:00", recordsSynced: 2340, errors: 5, status: "stale", uptime: 94.1 },
-  { name: "NIC NICNET", platform: "Network Infra", lastSync: "2026-03-18T09:00:00", recordsSynced: 156, errors: 0, status: "healthy", uptime: 99.8 },
-  { name: "PM-KISAN", platform: "Agriculture", lastSync: "2026-03-18T06:00:00", recordsSynced: 12450, errors: 1, status: "warning", uptime: 97.3 },
-  { name: "Jal Jeevan Mission", platform: "Water Supply", lastSync: "2026-03-18T08:00:00", recordsSynced: 3210, errors: 0, status: "healthy", uptime: 99.4 },
-  { name: "PM Awas Yojana", platform: "Housing", lastSync: "2026-03-17T18:00:00", recordsSynced: 4500, errors: 12, status: "error", uptime: 89.6 },
-  { name: "Swachh Bharat", platform: "Sanitation", lastSync: "2026-03-18T09:05:00", recordsSynced: 1870, errors: 0, status: "healthy", uptime: 99.6 },
-];
-
-const statusConfig = {
-  healthy: { icon: CheckCircle2, label: "Healthy", class: "text-gov-success bg-gov-success-light" },
-  warning: { icon: AlertTriangle, label: "Warning", class: "text-gov-warning bg-gov-warning-light" },
-  error: { icon: XCircle, label: "Error", class: "text-gov-danger bg-gov-danger-light" },
-  stale: { icon: Clock, label: "Stale", class: "text-muted-foreground bg-muted" },
+const STATUS_CFG: Record<Status, { label: string; class: string; Icon: typeof CheckCircle2 }> = {
+  planned: { label: "Planned", class: "text-muted-foreground bg-muted", Icon: Clock },
+  in_discussion: { label: "In Discussion", class: "text-gov-warning bg-gov-warning-light", Icon: AlertTriangle },
+  live: { label: "Live", class: "text-gov-success bg-gov-success-light", Icon: CheckCircle2 },
+  deprecated: { label: "Deprecated", class: "text-gov-danger bg-gov-danger-light", Icon: AlertTriangle },
 };
 
-function timeSince(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ${mins % 60}m ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
 export default function IntegrationHealthPage() {
-  const [refreshing, setRefreshing] = useState<string | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "system_admin" || user?.role === "chief_secretary";
+  const [items, setItems] = useState<Integration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Integration | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  const healthy = INTEGRATIONS.filter(i => i.status === "healthy").length;
-  const warnings = INTEGRATIONS.filter(i => i.status === "warning").length;
-  const errors = INTEGRATIONS.filter(i => i.status === "error" || i.status === "stale").length;
-
-  const handleRefresh = (name: string) => {
-    setRefreshing(name);
-    setTimeout(() => setRefreshing(null), 2000);
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("integrations").select("*").order("display_order");
+    setItems((data as Integration[]) || []);
+    setLoading(false);
   };
+
+  useEffect(() => { load(); }, []);
+
+  const counts = items.reduce<Record<Status, number>>((acc, i) => {
+    acc[i.status] = (acc[i.status] || 0) + 1;
+    return acc;
+  }, { planned: 0, in_discussion: 0, live: 0, deprecated: 0 });
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground font-display">Integration Health Monitor</h1>
-          <p className="text-sm text-muted-foreground mt-1">Real-time status of all external data feeds</p>
+          <h1 className="text-2xl font-bold text-foreground font-display">External Integrations</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Catalog of external government systems planned for integration with this portal.
+            Status reflects current connector readiness — no live data is being pulled yet.
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => INTEGRATIONS.forEach(i => handleRefresh(i.name))}>
-          <RefreshCw className="h-4 w-4 mr-1" /> Refresh All
-        </Button>
+        {isAdmin && (
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Add Integration
+          </Button>
+        )}
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="gov-card-elevated p-4 border-l-4 border-l-gov-success">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-gov-success" />
-            <div>
-              <p className="text-2xl font-bold text-foreground">{healthy}</p>
-              <p className="text-xs text-muted-foreground">Healthy</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {(Object.keys(STATUS_CFG) as Status[]).map((s) => {
+          const cfg = STATUS_CFG[s];
+          const Icon = cfg.Icon;
+          return (
+            <div key={s} className="gov-card-elevated p-4">
+              <div className="flex items-center gap-2">
+                <div className={`p-2 rounded-lg ${cfg.class}`}><Icon className="h-4 w-4" /></div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{counts[s]}</p>
+                  <p className="text-xs text-muted-foreground">{cfg.label}</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="gov-card-elevated p-4 border-l-4 border-l-gov-warning">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-gov-warning" />
-            <div>
-              <p className="text-2xl font-bold text-foreground">{warnings}</p>
-              <p className="text-xs text-muted-foreground">Warnings</p>
-            </div>
-          </div>
-        </div>
-        <div className="gov-card-elevated p-4 border-l-4 border-l-gov-danger">
-          <div className="flex items-center gap-2">
-            <XCircle className="h-5 w-5 text-gov-danger" />
-            <div>
-              <p className="text-2xl font-bold text-foreground">{errors}</p>
-              <p className="text-xs text-muted-foreground">Errors / Stale</p>
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
-      {/* Integration list */}
       <div className="space-y-3">
-        {INTEGRATIONS.map((integration, i) => {
-          const cfg = statusConfig[integration.status];
-          const StatusIcon = cfg.icon;
+        {loading && <div className="gov-card-elevated text-sm text-muted-foreground">Loading...</div>}
+        {!loading && items.length === 0 && (
+          <div className="gov-card-elevated text-sm text-muted-foreground">No integrations defined yet.</div>
+        )}
+        {items.map((it, i) => {
+          const cfg = STATUS_CFG[it.status];
+          const Icon = cfg.Icon;
           return (
             <motion.div
-              key={integration.name}
+              key={it.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
               className="gov-card-elevated p-4"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className={`p-2 rounded-lg ${cfg.class}`}>
-                    <StatusIcon className="h-4 w-4" />
+                    <Database className="h-4 w-4" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-foreground">{integration.name}</h3>
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{integration.platform}</span>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {timeSince(integration.lastSync)}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {integration.recordsSynced.toLocaleString()} records
-                      </span>
-                      {integration.errors > 0 && (
-                        <span className="text-[11px] text-gov-danger font-medium">
-                          {integration.errors} error{integration.errors > 1 ? "s" : ""}
-                        </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-semibold text-foreground">{it.name}</h3>
+                      {it.category && (
+                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{it.category}</span>
                       )}
+                      <span className={`gov-badge ${cfg.class}`}>
+                        <Icon className="h-2.5 w-2.5" /> {cfg.label}
+                      </span>
                     </div>
+                    {it.description && (
+                      <p className="text-xs text-muted-foreground mt-1 truncate">{it.description}</p>
+                    )}
+                    {it.owner && <p className="text-[10px] text-muted-foreground mt-0.5">Owner: {it.owner}</p>}
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right w-20">
-                    <p className="text-xs font-medium text-foreground">{integration.uptime}%</p>
-                    <Progress value={integration.uptime} className="h-1.5 mt-1" />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => handleRefresh(integration.name)}
-                    disabled={refreshing === integration.name}
-                  >
-                    <RefreshCw className={`h-3.5 w-3.5 ${refreshing === integration.name ? "animate-spin" : ""}`} />
+                {isAdmin && (
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditing(it)}>
+                    <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                </div>
+                )}
               </div>
             </motion.div>
           );
         })}
       </div>
+
+      {(editing || creating) && (
+        <IntegrationDialog
+          integration={editing}
+          onClose={() => { setEditing(null); setCreating(false); }}
+          onSaved={() => { setEditing(null); setCreating(false); load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function IntegrationDialog({
+  integration,
+  onClose,
+  onSaved,
+}: {
+  integration: Integration | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: integration?.name || "",
+    short_code: integration?.short_code || "",
+    description: integration?.description || "",
+    category: integration?.category || "",
+    status: (integration?.status as Status) || "planned",
+    owner: integration?.owner || "",
+    notes: integration?.notes || "",
+    display_order: integration?.display_order ?? 100,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!form.name.trim()) { toast.error("Name is required"); return; }
+    setSaving(true);
+    const payload = {
+      ...form,
+      name: form.name.trim(),
+      short_code: form.short_code.trim() || null,
+      description: form.description.trim() || null,
+      category: form.category.trim() || null,
+      owner: form.owner.trim() || null,
+      notes: form.notes.trim() || null,
+    };
+    const { error } = integration
+      ? await supabase.from("integrations").update(payload).eq("id", integration.id)
+      : await supabase.from("integrations").insert(payload);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(integration ? "Integration updated" : "Integration added");
+    onSaved();
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-display">{integration ? "Edit Integration" : "Add Integration"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs">Name *</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={120} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Category</Label>
+              <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} maxLength={60} />
+            </div>
+            <div>
+              <Label className="text-xs">Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Status })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="planned">Planned</SelectItem>
+                  <SelectItem value="in_discussion">In Discussion</SelectItem>
+                  <SelectItem value="live">Live</SelectItem>
+                  <SelectItem value="deprecated">Deprecated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Description</Label>
+            <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={500} rows={2} />
+          </div>
+          <div>
+            <Label className="text-xs">Owner</Label>
+            <Input value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} maxLength={120} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving..." : integration ? "Update" : "Add"}</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
