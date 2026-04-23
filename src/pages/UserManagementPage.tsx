@@ -117,13 +117,14 @@ export default function UserManagementPage() {
                 <th className="text-left px-4 py-3">Role</th>
                 <th className="text-left px-4 py-3">District / Dept</th>
                 <th className="text-left px-4 py-3">Email</th>
+                <th className="text-left px-4 py-3">Parichay UID</th>
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-right px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">Loading...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">Loading...</td></tr>
               )}
               {!isLoading && filtered.map((u: any, i: number) => (
                 <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
@@ -153,13 +154,38 @@ export default function UserManagementPage() {
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {u.email || "—"}</span>
                   </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
+                    {u.parichay_uid ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary">
+                        <KeyRound className="h-2.5 w-2.5" /> {u.parichay_uid}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/60">— not mapped —</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
-                    <span className={`gov-badge ${u.is_active ? "bg-gov-success-light text-gov-success" : "bg-muted text-muted-foreground"}`}>
-                      {u.is_active ? "Active" : "Inactive"}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`gov-badge ${u.is_active ? "bg-gov-success-light text-gov-success" : "bg-muted text-muted-foreground"}`}>
+                        {u.is_active ? "Active" : "Inactive"}
+                      </span>
+                      {u.is_cso_admin && (
+                        <span className="gov-badge bg-accent/20 text-accent-foreground text-[9px]">CSO Admin</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
+                      {canImpersonate && u.is_active && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-primary"
+                          title="Login as this officer"
+                          onClick={() => handleImpersonate(u.id, u.name)}
+                        >
+                          <LogIn className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditing(u); setDialogOpen(true); }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -171,7 +197,7 @@ export default function UserManagementPage() {
                 </motion.tr>
               ))}
               {!isLoading && filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No officers found</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">No officers found</td></tr>
               )}
             </tbody>
           </table>
