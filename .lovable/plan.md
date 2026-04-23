@@ -1,113 +1,117 @@
 
 
-# Plan: Deployment-Ready Hardening for CS Office
+# Plan: Production Cleanup + Officer Assignment + AI Insights
 
-Goal: lock down access control, fix functional bugs in the CS-Office flows, and ship with production-grade settings — without changing the demo's role-selection UX.
-
----
-
-## Step 1 — Restrict the database (biggest go-live blocker)
-
-Every table currently has RLS policies of `USING (true)` / `WITH CHECK (true)`, so the anon key can read or write anything. Replace these with **read-only public** + **authenticated-only writes**, and harden the two new surfaces.
-
-Migration changes:
-
-| Table | New policy set |
-|---|---|
-| `districts`, `departments`, `guardian_secretaries`, `project_categories`, `project_tags` | `SELECT` to anon + authenticated; **no public INSERT/UPDATE** |
-| `projects`, `tasks`, `task_districts`, `task_departments`, `project_districts`, `project_departments`, `project_tag_assignments`, `visits`, `meeting_minutes`, `notifications`, `document_uploads` | `SELECT` to anon + authenticated; `INSERT` / `UPDATE` / `DELETE` to **authenticated** role only |
-| `documents` storage bucket | `SELECT`/`INSERT` for authenticated only |
-
-Because the demo currently runs without a real Supabase session, also add a tiny anonymous sign-in step on app load (`supabase.auth.signInAnonymously()`) so the existing UI keeps working with the new authenticated-only writes. This is a one-line change in `auth-context.tsx` on mount.
+## Goal
+Clear demo data, give Chief Secretary + CS Office full user/officer management with direct assignment of projects and tasks to specific officers (also from meeting minutes), and add an AI Insights layer.
 
 ---
 
-## Step 2 — CS Office authentication & session persistence
+## Part 1 — Clean Demo Data
 
-Current issues:
-- `useState(null)` for the user means **a page refresh logs the user out**.
-- The `system_admin` count badge says "3" but only Pratik + Rishikesh exist.
-- The `authenticate-cso` edge function still embeds plaintext passwords. Move them to a **secret** (`CSO_USERS_JSON`) so credentials can be rotated without a code deploy, and hash with bcrypt-style comparison via timing-safe equals.
+Wipe transactional demo data while keeping **reference data** (districts, departments, guardian secretaries, categories, tags) intact.
 
-Changes:
-- `auth-context.tsx`: persist `user` in `sessionStorage`, restore on mount.
-- `mock-data.ts`: change CS Office count from `3` → `2`.
-- `authenticate-cso/index.ts`:
-  - Read users from `Deno.env.get("CSO_USERS_JSON")` (fallback to current 2-user array if unset).
-  - Add timing-safe comparison.
-  - Add a per-IP in-memory rate limit (5 attempts / 15 min) to slow brute-force.
-- Remove the on-screen "Authorized Users" hint block from `LoginPage.tsx` (info disclosure).
+Insert (DELETE) statements to clear:
+- `projects` (10 rows) and dependent rows in `project_districts`, `project_departments`, `project_tag_assignments`
+- `tasks` (12 rows) and dependent rows in `task_districts`, `task_departments`
+- `meeting_minutes` (already 0)
+- `visits` (already 0)
+- `notifications` (4 rows)
+- `document_uploads` (already 0)
 
----
+Kept as-is: districts (36), departments (16), guardian_secretaries (36), project_categories (6), project_tags (16) — these are the master lists the system needs to operate from day one.
 
-## Step 3 — Route-level role guard
-
-`/document-ai`, `/meeting-minutes`, `/users`, `/settings` are gated only in the sidebar. A user can still type the URL. Add a `<RoleProtectedRoute roles={[...]}>` wrapper in `App.tsx` that redirects unauthorised roles to `/dashboard`.
-
-Mapping:
-- `/document-ai` → `system_admin`
-- `/meeting-minutes`, `/users` → `system_admin`, `chief_secretary`
-- `/settings` → `system_admin`
+Also remove the hard-coded `MOCK_USERS` array in `UserManagementPage.tsx` so the User Management page reads live data from the database (see Part 2).
 
 ---
 
-## Step 4 — Fix functional bugs in Document AI page
+## Part 2 — Officer Directory + Direct Assignment
 
-1. **PDF/DOCX cannot be read by `FileReader.readAsText`** — they come back as binary garbage and waste an AI call. Restrict the accepted types to `.txt` and `.csv` only (update dropzone label, `accept` attribute, and `ALLOWED_*` arrays). Add a clear note: "Convert PDFs to text before upload." (Real PDF parsing requires a server-side parser — out of scope for this hardening pass; can be added later as a separate feature.)
-2. Switch model from `google/gemini-3-flash-preview` to **`google/gemini-2.5-flash`** (stable, billed normally, same speed tier).
-3. Wrap the AI's JSON output in a Zod schema check before returning, so malformed AI output never crashes the UI.
-4. In `handleImportProject` / `handleImportTask`, sanitise `category` against the known enum list before insert.
+### 2A. New `officers` table (single source of truth for assignable people)
+
+Migration creates `officers` table:
+- `id uuid pk`, `name text`, `designation text`, `email text unique`, `role text` (one of the 7 UserRole values), `district_id uuid?`, `department_id uuid?`, `is_active boolean default true`, timestamps
+- RLS: public read, authenticated write (matches current pattern)
+- Seed it once with the existing 36 guardian_secretaries + a Chief Secretary entry, so the directory is non-empty on first load
+
+### 2B. Add `assigned_officer_id` to `projects` and `tasks`
+
+Migration adds `assigned_officer_id uuid` (nullable) to both `projects` and `tasks`. The existing `responsible_officer` text column on `tasks` stays (legacy free-text), but the new column is the structured link used for filtering and "what's assigned to me".
+
+### 2C. User Management page becomes the Officers CRUD
+
+`UserManagementPage.tsx` rewritten to:
+- Read officers from the `officers` table via a new `useOfficers()` hook
+- Add/Edit/Deactivate officers via a new `OfficerFormDialog` — fields: name, designation, role, district, department, email
+- Search + role filter (existing UI preserved)
+- Visible to `system_admin` and `chief_secretary`
+
+New hooks in `use-data.ts`: `useOfficers`, `useCreateOfficer`, `useUpdateOfficer`, `useDeleteOfficer`.
+
+### 2D. Assign officer in Project & Task forms
+
+In `ProjectFormDialog.tsx` and `TaskFormDialog.tsx`, add an **"Assign to Officer"** dropdown populated from `useOfficers()`, optionally filtered by selected districts/departments. Saves to `assigned_officer_id`.
+
+### 2E. Assign officer from Meeting Minutes action items
+
+In `RecordMinutesPage.tsx`, alongside each action item add a small "Assign to" picker (officer dropdown). The existing **"Convert to Task"** / **"Convert All to Tasks"** flows pass `assigned_officer_id` into `useCreateTask`, so a task created from minutes shows up immediately on that officer's dashboard.
+
+### 2F. Officer-scoped views ("reflects to respective user")
+
+Extend `use-role-filter.ts` so when the logged-in user matches an officer (by email), `filterProjects()` and `filterTasks()` also return items where `assigned_officer_id === currentOfficer.id`. The Dashboard, Projects, and Actionables pages already call these filters, so the assigned items will appear in that officer's views automatically. Add a small **"Assigned to me"** badge/section on the Dashboard.
 
 ---
 
-## Step 5 — Fix Meeting Minutes bugs
+## Part 3 — AI Insights Layer
 
-1. `related_project_id: form.related_project_id || undefined` — when the user picks nothing, current value is `""`, which Supabase rejects as invalid UUID. Use `|| null` and ensure the column accepts null (it already does).
-2. Add validation: `attendees`, `decisions`, `action_items` items max 200 chars each; cap list length at 50.
-3. The "Convert All to Tasks" handler fires N parallel mutations without awaiting — add sequential awaits + summary toast ("12 tasks created").
+### 3A. New edge function `generate-insights`
+
+`supabase/functions/generate-insights/index.ts`:
+- Reads aggregated, **non-PII** stats server-side (counts by status, overdue count, critical count, GOI-pending count, top 5 stuck districts/departments, recent meeting decisions count)
+- Sends only the aggregated summary to Lovable AI (`google/gemini-2.5-flash`) — never raw rows
+- Returns structured JSON: `{ headline, key_insights: string[], risks: string[], recommendations: string[] }` enforced via tool-calling schema
+- CORS, Zod input validation, 429/402 error pass-through
+
+### 3B. New page `InsightsPage.tsx` at `/insights`
+
+- Header: "AI Insights & Recommendations"
+- "Generate Insights" button → calls the edge function, renders the four sections in cards
+- Refresh button + last-generated timestamp
+- Stored in a new `ai_insights` table (id, generated_at, payload jsonb, generated_by) so insights persist between sessions
+- Sidebar entry with `Sparkles` icon, gated to `chief_secretary`, `cmo`, `system_admin`, `divisional_commissioner`
+
+### 3C. Dashboard mini-insight widget
+
+Small card on `DashboardPage.tsx` showing the latest insight `headline` + top 1 recommendation, with a "View all insights" link.
 
 ---
 
-## Step 6 — Edge function robustness
-
-For both `process-document` and `authenticate-cso`:
-- Add structured Zod input validation.
-- Always include `corsHeaders` on every response (already done — verify).
-- Wrap `JSON.parse(req.json())` failures in try/catch returning 400 (currently throws 500).
-- Add `console.log` of `mode` + `fileName` + `userEmail` (no content) for an audit trail.
-
----
-
-## Step 7 — Realtime hook stability
-
-`use-notifications.ts` already fixed. Add the same pattern (empty deps + `removeChannel` cleanup) defensively to any other realtime subscriber if introduced later — none exist today, so just a documented convention in a code comment.
-
----
-
-## Files to change
+## Files Changed
 
 | File | Change |
 |---|---|
-| `supabase/migrations/<new>.sql` | Replace permissive RLS with role-scoped policies on all 15 tables + storage bucket |
-| `src/lib/auth-context.tsx` | sessionStorage persistence + `signInAnonymously` on mount |
-| `src/lib/mock-data.ts` | CSO count 3 → 2 |
-| `src/pages/LoginPage.tsx` | Remove authorised-users hint block |
-| `src/App.tsx` | Add `RoleProtectedRoute` and apply to 4 routes |
-| `src/pages/DocumentAIPage.tsx` | Restrict to .txt/.csv, sanitise import payload, better error display |
-| `src/pages/RecordMinutesPage.tsx` | `related_project_id` null fix, sequential convert-all, length caps |
-| `supabase/functions/process-document/index.ts` | Switch to `gemini-2.5-flash`, Zod validation, audit log |
-| `supabase/functions/authenticate-cso/index.ts` | Read users from secret, timing-safe compare, rate-limit |
-| (new secret) | `CSO_USERS_JSON` (set via add_secret tool) |
+| `supabase/migrations/<new>.sql` | Create `officers`, `ai_insights` tables; add `assigned_officer_id` to `projects` and `tasks`; seed officers from existing GS list |
+| (data wipe via insert tool) | DELETE rows in `projects`, `tasks`, link tables, `notifications` |
+| `src/hooks/use-data.ts` | Add `useOfficers`, `useCreateOfficer`, `useUpdateOfficer`, `useDeleteOfficer`; include `assigned_officer_id` in project/task create/update |
+| `src/hooks/use-role-filter.ts` | Add officer-id–based filter branch |
+| `src/components/OfficerFormDialog.tsx` | New — add/edit officer |
+| `src/pages/UserManagementPage.tsx` | Rewrite to read live `officers` data, with CRUD UI |
+| `src/components/ProjectFormDialog.tsx` | Add "Assign to Officer" dropdown |
+| `src/components/TaskFormDialog.tsx` | Add "Assign to Officer" dropdown |
+| `src/pages/RecordMinutesPage.tsx` | Per-action-item officer picker; pass through to task creation |
+| `supabase/functions/generate-insights/index.ts` | New AI edge function |
+| `src/pages/InsightsPage.tsx` | New page |
+| `src/components/AppSidebar.tsx` | Add "AI Insights" nav item |
+| `src/App.tsx` | Add `/insights` route under role guard |
+| `src/pages/DashboardPage.tsx` | Add mini-insight widget + "Assigned to me" section |
 
 ---
 
-## What this delivers
+## Deployment-Ready Checklist (delivered after this batch)
 
-- Database is no longer wide-open from the anon key.
-- CSO logins survive refresh and can be rotated without redeploying code.
-- URL-typing cannot bypass role restrictions.
-- Document AI no longer silently fails on PDFs and uses a stable model.
-- Meeting Minutes conversion + project linking work without the existing UUID and async bugs.
-
-After applying, run the security scan to confirm no `error`-level findings remain, then publish.
+- Database is empty of demo transactions; reference data ready to use
+- Chief Secretary can add officers and assign projects/tasks/meeting action items directly
+- Each officer sees their assigned items on login
+- AI Insights generates state-wide summary on demand without exposing raw data
+- All new endpoints follow existing RLS pattern (public read, authenticated write) and Zod input validation
 
