@@ -113,6 +113,50 @@ export type Database = {
         }
         Relationships: []
       }
+      external_identities: {
+        Row: {
+          created_at: string
+          email: string | null
+          external_uid: string
+          id: string
+          is_active: boolean
+          last_login_at: string | null
+          officer_id: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          external_uid: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          officer_id: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          external_uid?: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          officer_id?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_identities_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guardian_secretaries: {
         Row: {
           created_at: string
@@ -147,6 +191,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integrations: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          notes: string | null
+          owner: string | null
+          short_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          notes?: string | null
+          owner?: string | null
+          short_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          owner?: string | null
+          short_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       meeting_minutes: {
         Row: {
@@ -264,7 +350,9 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean
+          is_cso_admin: boolean
           name: string
+          parichay_uid: string | null
           role: string
           updated_at: string
         }
@@ -276,7 +364,9 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          is_cso_admin?: boolean
           name: string
+          parichay_uid?: string | null
           role?: string
           updated_at?: string
         }
@@ -288,7 +378,9 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          is_cso_admin?: boolean
           name?: string
+          parichay_uid?: string | null
           role?: string
           updated_at?: string
         }

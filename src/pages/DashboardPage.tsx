@@ -5,9 +5,8 @@ import {
   ClipboardList, AlertTriangle, MapPin, BarChart3, Calendar, Globe,
   TrendingUp, Users, CheckCircle, Clock, Shield, ArrowUpRight
 } from "lucide-react";
-import { useTasks, useVisits } from "@/hooks/use-data";
+import { useTasks, useVisits, useDepartments } from "@/hooks/use-data";
 import { useRoleFilter } from "@/hooks/use-role-filter";
-import { QUARTERLY_DATA, DEPARTMENT_PERFORMANCE } from "@/lib/mock-data";
 import type { ActionableStatus, Priority } from "@/lib/mock-data";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -19,10 +18,38 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: tasks } = useTasks();
   const { data: visits } = useVisits();
+  const { data: departments } = useDepartments();
   const { filterTasks, filterVisits } = useRoleFilter();
 
   const allTasks = filterTasks(tasks || []);
   const allVisits = filterVisits(visits || []);
+
+  // Live quarterly trends derived from task created_at
+  const quarterlyData = (() => {
+    const buckets: Record<string, { quarter: string; raised: number; resolved: number; overdue: number }> = {};
+    allTasks.forEach((t: any) => {
+      const d = new Date(t.created_at);
+      const q = `Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}`;
+      buckets[q] = buckets[q] || { quarter: q, raised: 0, resolved: 0, overdue: 0 };
+      buckets[q].raised += 1;
+      if (t.status === "closed" || t.status === "completed_pending_closure") buckets[q].resolved += 1;
+      if (t.status === "overdue") buckets[q].overdue += 1;
+    });
+    return Object.values(buckets).sort((a, b) => a.quarter.localeCompare(b.quarter));
+  })();
+
+  // Live department performance
+  const deptPerformance = (departments || []).map((d: any) => {
+    const dTasks = allTasks.filter((t: any) =>
+      (t.task_departments || []).some((td: any) => td.department_id === d.id)
+    );
+    const open = dTasks.filter((t: any) => !["closed", "completed_pending_closure"].includes(t.status)).length;
+    const resolved = dTasks.filter((t: any) => t.status === "closed" || t.status === "completed_pending_closure").length;
+    const overdue = dTasks.filter((t: any) => t.status === "overdue").length;
+    const total = dTasks.length;
+    const score = total === 0 ? 0 : Math.max(0, Math.round((resolved / total) * 100) - overdue * 5);
+    return { department: d.short_name || d.name, open, resolved, overdue, score };
+  }).filter(d => d.open + d.resolved + d.overdue > 0);
 
   const totalActionables = allTasks.length;
   const openItems = allTasks.filter(t => !["closed", "completed_pending_closure"].includes(t.status)).length;
@@ -98,7 +125,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 gov-card-elevated">
           <h3 className="gov-section-title mb-4">Quarterly Trends</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={QUARTERLY_DATA} barGap={4}>
+            <BarChart data={quarterlyData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 88%)" />
               <XAxis dataKey="quarter" tick={{ fontSize: 11 }} stroke="hsl(220, 15%, 46%)" />
               <YAxis tick={{ fontSize: 11 }} stroke="hsl(220, 15%, 46%)" />
@@ -183,7 +210,10 @@ export default function DashboardPage() {
           <div className="gov-card-elevated">
             <h3 className="gov-section-title mb-4">Department Performance</h3>
             <div className="space-y-3">
-              {DEPARTMENT_PERFORMANCE.map((dept) => (
+              {deptPerformance.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No department data yet</p>
+              )}
+              {deptPerformance.map((dept) => (
                 <div key={dept.department} className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">{dept.department}</span>

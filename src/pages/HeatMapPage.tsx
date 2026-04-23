@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { MOCK_HEAT_DATA, DistrictHeatData } from "@/lib/mock-data";
-import { MapPin, Filter, Download, ChevronRight, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { useState, useMemo } from "react";
+import { DistrictHeatData, scoreToLevel } from "@/lib/mock-data";
+import { MapPin, Download, ChevronRight, CheckCircle, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useDistricts, useTasks, useVisits } from "@/hooks/use-data";
 
 const LEVEL_CONFIG = {
   high_performing: { label: "High Performing", color: "bg-emerald-600", textColor: "text-emerald-600", lightBg: "bg-emerald-50" },
@@ -15,19 +16,60 @@ const LEVEL_CONFIG = {
 };
 
 export default function HeatMapPage() {
+  const { data: districts } = useDistricts();
+  const { data: tasks } = useTasks();
+  const { data: visits } = useVisits();
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictHeatData | null>(null);
   const [sortBy, setSortBy] = useState("score");
 
-  const sorted = [...MOCK_HEAT_DATA].sort((a, b) => {
+  const heatData: DistrictHeatData[] = useMemo(() => {
+    if (!districts) return [];
+    return districts.map((d: any) => {
+      const districtTasks = (tasks || []).filter((t: any) =>
+        (t.task_districts || []).some((td: any) => td.district_id === d.id)
+      );
+      const open = districtTasks.filter((t: any) => !["closed", "completed_pending_closure"].includes(t.status)).length;
+      const overdue = districtTasks.filter((t: any) => t.status === "overdue").length;
+      const critical = districtTasks.filter((t: any) => t.is_critical || t.priority === "critical").length;
+      const total = districtTasks.length;
+      const closed = districtTasks.filter((t: any) => t.status === "closed").length;
+      const visitCompleted = (visits || []).some((v: any) => v.district_id === d.id && v.status === "completed");
+
+      // Score: 100 - penalties, bounded [0, 100]
+      let score = 100;
+      if (total > 0) {
+        score -= Math.min(40, overdue * 8);
+        score -= Math.min(30, critical * 6);
+        score -= Math.min(20, Math.round((open / total) * 20));
+        score += Math.min(15, Math.round((closed / total) * 15));
+      }
+      if (!visitCompleted) score -= 10;
+      score = Math.max(0, Math.min(100, score));
+
+      return {
+        district: d.name,
+        score,
+        level: scoreToLevel(score),
+        openActionables: open,
+        overdueItems: overdue,
+        visitCompleted,
+        criticalIssues: critical,
+      };
+    });
+  }, [districts, tasks, visits]);
+
+  const sorted = [...heatData].sort((a, b) => {
     if (sortBy === "score") return a.score - b.score;
     if (sortBy === "overdue") return b.overdueItems - a.overdueItems;
     return b.criticalIssues - a.criticalIssues;
   });
 
-  const levelCounts = MOCK_HEAT_DATA.reduce((acc, d) => {
+  const levelCounts = heatData.reduce((acc, d) => {
     acc[d.level] = (acc[d.level] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  const hasAnyActivity = heatData.some(d => d.openActionables > 0 || d.visitCompleted);
 
   return (
     <div className="p-6 space-y-6">
@@ -40,6 +82,12 @@ export default function HeatMapPage() {
           <Download className="h-4 w-4 mr-1" /> Export PDF
         </Button>
       </div>
+
+      {!hasAnyActivity && (
+        <div className="gov-card-elevated text-sm text-muted-foreground">
+          No data yet — district scores will appear once tasks and visits are recorded.
+        </div>
+      )}
 
       {/* Legend */}
       <div className="gov-card flex flex-wrap items-center gap-4">
