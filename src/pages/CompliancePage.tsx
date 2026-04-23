@@ -1,21 +1,66 @@
-import { MAHARASHTRA_DISTRICTS, DEPARTMENT_PERFORMANCE } from "@/lib/mock-data";
-import { BarChart3, Download, TrendingUp, TrendingDown, Users } from "lucide-react";
+import { useMemo } from "react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-
-const GS_COMPLIANCE = MAHARASHTRA_DISTRICTS.slice(0, 20).map((d) => ({
-  district: d,
-  gsName: `GS ${d}`,
-  q1: Math.random() > 0.1,
-  q2: Math.random() > 0.15,
-  q3: Math.random() > 0.1,
-  q4: Math.random() > 0.3,
-  score: Math.floor(Math.random() * 40) + 60,
-  daysSinceVisit: Math.floor(Math.random() * 90),
-}));
+import { useDistricts, useDepartments, useTasks, useVisits } from "@/hooks/use-data";
 
 export default function CompliancePage() {
+  const { data: districts } = useDistricts();
+  const { data: departments } = useDepartments();
+  const { data: tasks } = useTasks();
+  const { data: visits } = useVisits();
+
+  // Department compliance scores from real tasks
+  const deptScores = useMemo(() => {
+    if (!departments) return [];
+    return departments.map((d: any) => {
+      const dTasks = (tasks || []).filter((t: any) =>
+        (t.task_departments || []).some((td: any) => td.department_id === d.id)
+      );
+      const total = dTasks.length;
+      const closed = dTasks.filter((t: any) => t.status === "closed" || t.status === "completed_pending_closure").length;
+      const overdue = dTasks.filter((t: any) => t.status === "overdue").length;
+      const score = total === 0 ? 0 : Math.max(0, Math.round((closed / total) * 100) - overdue * 5);
+      return { department: d.short_name || d.name, score };
+    });
+  }, [departments, tasks]);
+
+  // GS visit compliance per district
+  const gsCompliance = useMemo(() => {
+    if (!districts) return [];
+    return districts.map((d: any) => {
+      const dVisits = (visits || []).filter((v: any) => v.district_id === d.id);
+      const byQuarter = (q: string) => dVisits.some((v: any) => v.quarter === q && v.status === "completed");
+      const completed = dVisits.filter((v: any) => v.status === "completed").length;
+      const lastVisit = dVisits
+        .filter((v: any) => v.visit_date)
+        .map((v: any) => new Date(v.visit_date).getTime())
+        .sort((a, b) => b - a)[0];
+      const daysSinceVisit = lastVisit ? Math.floor((Date.now() - lastVisit) / 86400000) : null;
+      return {
+        district: d.name,
+        q1: byQuarter("Q1"),
+        q2: byQuarter("Q2"),
+        q3: byQuarter("Q3"),
+        q4: byQuarter("Q4"),
+        score: Math.min(100, completed * 25),
+        daysSinceVisit,
+      };
+    });
+  }, [districts, visits]);
+
+  const summary = useMemo(() => {
+    const completed = (visits || []).filter((v: any) => v.status === "completed").length;
+    const pending = (visits || []).filter((v: any) => v.status === "scheduled").length;
+    const missed = (visits || []).filter((v: any) => v.status === "missed").length;
+    return {
+      completed: `${completed}/${(districts || []).length || 36}`,
+      pending,
+      missed,
+    };
+  }, [visits, districts]);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
@@ -31,10 +76,10 @@ export default function CompliancePage() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Visits Completed", value: "28/36", color: "text-gov-success", bg: "bg-gov-success-light" },
-          { label: "Pending", value: "5", color: "text-gov-warning", bg: "bg-gov-warning-light" },
-          { label: "Overdue", value: "2", color: "text-gov-danger", bg: "bg-gov-danger-light" },
-          { label: "Missed (Q3)", value: "1", color: "text-gov-danger", bg: "bg-gov-danger-light" },
+          { label: "Visits Completed", value: summary.completed, color: "text-gov-success", bg: "bg-gov-success-light" },
+          { label: "Pending", value: summary.pending, color: "text-gov-warning", bg: "bg-gov-warning-light" },
+          { label: "Missed", value: summary.missed, color: "text-gov-danger", bg: "bg-gov-danger-light" },
+          { label: "Districts", value: (districts || []).length || 36, color: "text-gov-info", bg: "bg-gov-info-light" },
         ].map((s) => (
           <div key={s.label} className={`gov-stat-card ${s.bg}`}>
             <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
@@ -47,10 +92,10 @@ export default function CompliancePage() {
       <div className="gov-card-elevated">
         <h3 className="gov-section-title mb-4">Department Compliance Scores</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={DEPARTMENT_PERFORMANCE} layout="vertical" barSize={16}>
+          <BarChart data={deptScores} layout="vertical" barSize={16}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 88%)" />
             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} stroke="hsl(220, 15%, 46%)" />
-            <YAxis type="category" dataKey="department" width={80} tick={{ fontSize: 11 }} stroke="hsl(220, 15%, 46%)" />
+            <YAxis type="category" dataKey="department" width={120} tick={{ fontSize: 11 }} stroke="hsl(220, 15%, 46%)" />
             <Tooltip contentStyle={{ background: "hsl(0,0%,100%)", border: "1px solid hsl(220,20%,88%)", borderRadius: "8px", fontSize: "12px" }} />
             <Bar dataKey="score" radius={[0, 4, 4, 0]} fill="hsl(220, 70%, 22%)" />
           </BarChart>
@@ -60,7 +105,7 @@ export default function CompliancePage() {
       {/* GS Visit compliance table */}
       <div className="gov-card-elevated overflow-hidden p-0">
         <div className="p-4 border-b border-border">
-          <h3 className="gov-section-title">GS Visit Compliance — FY 2024-25</h3>
+          <h3 className="gov-section-title">GS Visit Compliance — Live</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -76,21 +121,21 @@ export default function CompliancePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {GS_COMPLIANCE.map((row, i) => (
+              {gsCompliance.map((row, i) => (
                 <motion.tr
                   key={row.district}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.02 }}
+                  transition={{ delay: i * 0.01 }}
                   className="hover:bg-secondary/30"
                 >
                   <td className="px-4 py-3 text-sm font-medium text-foreground">{row.district}</td>
                   {[row.q1, row.q2, row.q3, row.q4].map((q, qi) => (
                     <td key={qi} className="px-4 py-3 text-center">
                       <span className={`inline-block w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center mx-auto ${
-                        q ? "bg-gov-success-light text-gov-success" : "bg-gov-danger-light text-gov-danger"
+                        q ? "bg-gov-success-light text-gov-success" : "bg-muted text-muted-foreground"
                       }`}>
-                        {q ? "✓" : "✗"}
+                        {q ? "✓" : "—"}
                       </span>
                     </td>
                   ))}
@@ -99,9 +144,14 @@ export default function CompliancePage() {
                       {row.score}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center text-sm text-muted-foreground">{row.daysSinceVisit}d</td>
+                  <td className="px-4 py-3 text-center text-sm text-muted-foreground">
+                    {row.daysSinceVisit !== null ? `${row.daysSinceVisit}d` : "—"}
+                  </td>
                 </motion.tr>
               ))}
+              {gsCompliance.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">No districts loaded</td></tr>
+              )}
             </tbody>
           </table>
         </div>

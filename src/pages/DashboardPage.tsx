@@ -5,9 +5,8 @@ import {
   ClipboardList, AlertTriangle, MapPin, BarChart3, Calendar, Globe,
   TrendingUp, Users, CheckCircle, Clock, Shield, ArrowUpRight
 } from "lucide-react";
-import { useTasks, useVisits } from "@/hooks/use-data";
+import { useTasks, useVisits, useDepartments } from "@/hooks/use-data";
 import { useRoleFilter } from "@/hooks/use-role-filter";
-import { QUARTERLY_DATA, DEPARTMENT_PERFORMANCE } from "@/lib/mock-data";
 import type { ActionableStatus, Priority } from "@/lib/mock-data";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
