@@ -23,8 +23,9 @@ export function useNotifications() {
   // to prevent "cannot add postgres_changes callbacks after subscribe()" errors.
   // Never include qc or other reactive deps here.
   useEffect(() => {
-    const channel = supabase
-      .channel("notifications-realtime")
+    // Unique channel name per mount avoids StrictMode "callbacks after subscribe()" race
+    const channel = supabase.channel(`notifications-realtime-${Math.random().toString(36).slice(2)}`);
+    channel
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
