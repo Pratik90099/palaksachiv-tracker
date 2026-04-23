@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useProjects, useCreateTask } from "@/hooks/use-data";
+import { useProjects, useCreateTask, useOfficers } from "@/hooks/use-data";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -122,11 +122,13 @@ function generateMinutesPDF(m: any) {
 export default function RecordMinutesPage() {
   const { data: minutes, isLoading } = useMeetingMinutes();
   const { data: projects } = useProjects();
+  const { data: officers } = useOfficers();
   const createMinutes = useCreateMinutes();
   const createTask = useCreateTask();
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [convertedItems, setConvertedItems] = useState<Set<string>>(new Set());
+  const [actionAssignments, setActionAssignments] = useState<Record<string, string>>({});
 
   // Form state
   const [form, setForm] = useState({
@@ -194,6 +196,7 @@ export default function RecordMinutesPage() {
   ): Promise<boolean> => {
     const key = `${minuteId}-${index}`;
     if (convertedItems.has(key)) return false;
+    const assignedOfficerId = actionAssignments[key] || null;
 
     try {
       await createTask.mutateAsync({
@@ -204,6 +207,7 @@ export default function RecordMinutesPage() {
         is_goi_pending: false,
         is_critical: false,
         project_id: relatedProjectId || undefined,
+        assigned_officer_id: assignedOfficerId,
         district_ids: [],
         department_ids: [],
       });
@@ -475,9 +479,23 @@ export default function RecordMinutesPage() {
                           const key = `${m.id}-${j}`;
                           const isConverted = convertedItems.has(key);
                           return (
-                            <li key={j} className="text-xs text-foreground flex items-center gap-1.5">
+                            <li key={j} className="text-xs text-foreground flex items-center gap-1.5 flex-wrap">
                               <Clock className="h-3 w-3 text-gov-warning shrink-0" />
-                              <span className="flex-1">{a}</span>
+                              <span className="flex-1 min-w-[160px]">{a}</span>
+                              {!isConverted && (
+                                <Select
+                                  value={actionAssignments[key] || "none"}
+                                  onValueChange={(v) => setActionAssignments((s) => ({ ...s, [key]: v === "none" ? "" : v }))}
+                                >
+                                  <SelectTrigger className="h-6 text-[10px] w-[160px]"><SelectValue placeholder="Assign to..." /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">— Unassigned —</SelectItem>
+                                    {officers?.filter((o: any) => o.is_active).map((o: any) => (
+                                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
                               {isConverted ? (
                                 <span className="text-[10px] text-gov-success font-medium flex items-center gap-0.5">
                                   <CheckCircle2 className="h-3 w-3" /> Created
