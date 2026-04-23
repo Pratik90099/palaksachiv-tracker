@@ -102,7 +102,7 @@ Update `.env` (or your hosting platform's secrets) with:
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Public anon key for client reads |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only key used by edge functions for elevated writes |
 | `LOVABLE_API_KEY` | (Edge function) Required if you keep the AI Insights / document processing functions |
-| `VITE_DEMO_MODE` | Set to `"false"` in production to disable demo role logins |
+
 
 ### 3. Re-create the `documents` storage bucket
 

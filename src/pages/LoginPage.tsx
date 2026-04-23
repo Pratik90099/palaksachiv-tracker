@@ -1,18 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
-import { USER_ROLES, UserRole } from "@/lib/mock-data";
-import { Shield, ArrowRight, Lock, Building2, Globe2, ArrowLeft, Mail, KeyRound } from "lucide-react";
+import { Shield, Lock, Building2, Globe2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { loginWithParichay, isDemoMode } from "@/lib/auth-adapter";
+import { loginWithParichay } from "@/lib/auth-adapter";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const { login, loginWithCSOData, setUserFromAdapter } = useAuth();
+  const { loginWithCSOData, setUserFromAdapter } = useAuth();
   const navigate = useNavigate();
   const [showCSOLogin, setShowCSOLogin] = useState(false);
   const [email, setEmail] = useState("");
@@ -20,22 +19,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [parichayLoading, setParichayLoading] = useState(false);
-  const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    // Live role counts from officers table
-    supabase
-      .from("officers")
-      .select("role")
-      .eq("is_active", true)
-      .then(({ data }) => {
-        const counts: Record<string, number> = {};
-        (data || []).forEach((o: any) => {
-          counts[o.role] = (counts[o.role] || 0) + 1;
-        });
-        setRoleCounts(counts);
-      });
-  }, []);
 
   const handleParichayLogin = async () => {
     setParichayLoading(true);
@@ -53,26 +36,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleLogin = (role: UserRole) => {
-    if (role === "system_admin") {
-      setShowCSOLogin(true);
-      setError("");
-      return;
-    }
-    if (!isDemoMode) {
-      toast.error("Demo role login is disabled in production. Please use Parichay SSO.");
-      return;
-    }
-    try {
-      login(role);
-      navigate("/dashboard");
-    } catch (e: any) {
-      toast.error(e.message);
-    }
-  };
-
   const handleCSOLogin = async () => {
-    // Input validation
     if (!email.trim() || email.length > 255) {
       setError("Please enter a valid email address");
       return;
@@ -143,7 +107,7 @@ export default function LoginPage() {
               Portal
             </h2>
             <p className="text-sm opacity-70 mt-4 max-w-md leading-relaxed">
-              Digital Governance Platform for structured quarterly visit management, 
+              Digital Governance Platform for structured quarterly visit management,
               issue tracking, and inter-departmental coordination across all 36 districts of Maharashtra.
             </p>
           </motion.div>
@@ -196,7 +160,7 @@ export default function LoginPage() {
           <AnimatePresence mode="wait">
             {!showCSOLogin ? (
               <motion.div
-                key="role-select"
+                key="primary"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -204,7 +168,7 @@ export default function LoginPage() {
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-foreground font-display">Sign In</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Select your role to access the portal (Demo Mode)
+                    Choose your authentication method
                   </p>
                 </div>
 
@@ -212,53 +176,36 @@ export default function LoginPage() {
                 <button
                   onClick={handleParichayLogin}
                   disabled={parichayLoading}
-                  className="w-full mb-6 py-3.5 rounded-lg font-semibold text-sm bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="w-full mb-4 py-3.5 rounded-lg font-semibold text-sm bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   <Lock className="h-4 w-4" />
                   {parichayLoading ? "Contacting Parichay..." : "Sign in with Parichay SSO"}
                 </button>
 
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-3 my-6">
                   <div className="h-px flex-1 bg-border" />
-                  <span className="text-xs text-muted-foreground">Demo Role Selection</span>
+                  <span className="text-xs text-muted-foreground">or</span>
                   <div className="h-px flex-1 bg-border" />
                 </div>
 
-                <div className="space-y-2">
-                  {USER_ROLES.map((role, i) => {
-                    const count = roleCounts[role.value] || 0;
-                    return (
-                      <motion.button
-                        key={role.value}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 + i * 0.05 }}
-                        onClick={() => handleLogin(role.value)}
-                        className="w-full flex items-center justify-between p-3.5 rounded-lg border border-border bg-card hover:border-primary/30 hover:bg-secondary/50 transition-all group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-xs font-bold text-secondary-foreground">
-                            {count}
-                          </div>
-                          <div className="text-left">
-                            <p className="text-sm font-semibold text-foreground">{role.label}</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {role.value === "system_admin" ? "Credential login required" : `${count} officer${count === 1 ? "" : "s"} on record`}
-                            </p>
-                          </div>
-                        </div>
-                        {role.value === "system_admin" ? (
-                          <Lock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        ) : (
-                          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        )}
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                <button
+                  onClick={() => { setShowCSOLogin(true); setError(""); }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-lg border border-border bg-card hover:border-primary/30 hover:bg-secondary/50 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center">
+                      <Shield className="h-4 w-4 text-secondary-foreground" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-semibold text-foreground">Chief Secretary's Office</p>
+                      <p className="text-[10px] text-muted-foreground">Credential login required</p>
+                    </div>
+                  </div>
+                  <Lock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </button>
 
                 <p className="text-[10px] text-muted-foreground text-center mt-6">
-                  In production, authentication will be exclusively through Parichay SSO.
+                  Authentication is exclusively through Parichay SSO and authorized CS Office credentials.
                 </p>
               </motion.div>
             ) : (
@@ -273,7 +220,7 @@ export default function LoginPage() {
                   className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Back to role selection
+                  Back
                 </button>
 
                 <div className="text-center mb-8">
