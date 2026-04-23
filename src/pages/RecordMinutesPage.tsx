@@ -40,7 +40,7 @@ function useCreateMinutes() {
       minutes_text: string;
       decisions?: string[];
       action_items?: string[];
-      related_project_id?: string;
+      related_project_id?: string | null;
     }) => {
       const { data, error } = await supabase.from("meeting_minutes").insert(input).select().single();
       if (error) throw error;
@@ -155,17 +155,28 @@ export default function RecordMinutesPage() {
       toast.error("Minutes text must be under 10,000 characters");
       return;
     }
+
+    // Cap list items to 50 entries, each ≤200 chars
+    const splitAndCap = (txt: string) =>
+      txt
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 50)
+        .map((s) => s.slice(0, 200));
+
     createMinutes.mutate({
       title: form.title,
       meeting_date: form.meeting_date,
       venue: form.venue || undefined,
       chaired_by: form.chaired_by || undefined,
-      attendees: form.attendees ? form.attendees.split("\n").filter(Boolean) : undefined,
+      attendees: form.attendees ? splitAndCap(form.attendees) : undefined,
       agenda: form.agenda || undefined,
       minutes_text: form.minutes_text,
-      decisions: form.decisions ? form.decisions.split("\n").filter(Boolean) : undefined,
-      action_items: form.action_items ? form.action_items.split("\n").filter(Boolean) : undefined,
-      related_project_id: form.related_project_id || undefined,
+      decisions: form.decisions ? splitAndCap(form.decisions) : undefined,
+      action_items: form.action_items ? splitAndCap(form.action_items) : undefined,
+      // Use null (not "" or undefined) so Postgres accepts it as a UUID column
+      related_project_id: form.related_project_id || null,
     });
     setForm({
       title: "", meeting_date: new Date().toISOString().split("T")[0], venue: "",
@@ -175,36 +186,53 @@ export default function RecordMinutesPage() {
     setOpen(false);
   };
 
-  const handleConvertToTask = (minuteId: string, actionItem: string, index: number, relatedProjectId?: string) => {
+  const handleConvertToTask = async (
+    minuteId: string,
+    actionItem: string,
+    index: number,
+    relatedProjectId?: string
+  ): Promise<boolean> => {
     const key = `${minuteId}-${index}`;
-    if (convertedItems.has(key)) return;
+    if (convertedItems.has(key)) return false;
 
-    createTask.mutate({
-      title: actionItem,
-      description: `Auto-created from meeting minutes action item`,
-      priority: "high",
-      status: "not_started",
-      is_goi_pending: false,
-      is_critical: false,
-      project_id: relatedProjectId || undefined,
-      district_ids: [],
-      department_ids: [],
-    }, {
-      onSuccess: () => {
-        setConvertedItems(prev => new Set(prev).add(key));
-        toast.success("Action item converted to task");
-      },
-      onError: () => toast.error("Failed to create task"),
-    });
+    try {
+      await createTask.mutateAsync({
+        title: actionItem,
+        description: `Auto-created from meeting minutes action item`,
+        priority: "high",
+        status: "not_started",
+        is_goi_pending: false,
+        is_critical: false,
+        project_id: relatedProjectId || undefined,
+        district_ids: [],
+        department_ids: [],
+      });
+      setConvertedItems((prev) => new Set(prev).add(key));
+      return true;
+    } catch {
+      return false;
+    }
   };
 
-  const handleConvertAll = (m: any) => {
-    (m.action_items || []).forEach((item: string, idx: number) => {
+  const handleConvertAll = async (m: any) => {
+    const items: string[] = m.action_items || [];
+    if (items.length === 0) return;
+
+    let created = 0;
+    let failed = 0;
+
+    // Process sequentially to avoid race conditions on the display_id trigger
+    for (let idx = 0; idx < items.length; idx++) {
       const key = `${m.id}-${idx}`;
-      if (!convertedItems.has(key)) {
-        handleConvertToTask(m.id, item, idx, m.related_project_id);
-      }
-    });
+      if (convertedItems.has(key)) continue;
+      const ok = await handleConvertToTask(m.id, items[idx], idx, m.related_project_id);
+      if (ok) created++;
+      else failed++;
+    }
+
+    if (created > 0) toast.success(`${created} task${created === 1 ? "" : "s"} created`);
+    if (failed > 0) toast.error(`${failed} task${failed === 1 ? "" : "s"} failed to create`);
+    if (created === 0 && failed === 0) toast.info("All action items already converted");
   };
 
   return (

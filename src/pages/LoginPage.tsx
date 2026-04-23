@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, CS_OFFICE_EMAILS } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
 import { USER_ROLES, UserRole } from "@/lib/mock-data";
 import { Shield, ArrowRight, Lock, Building2, Globe2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -289,10 +289,9 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mt-6 p-3 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-[10px] text-muted-foreground font-semibold mb-1">Authorized Users:</p>
-                  {CS_OFFICE_EMAILS.map((u) => (
-                    <p key={u.email} className="text-[10px] text-muted-foreground">• {u.name} — {u.email}</p>
-                  ))}
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Access restricted to authorized Chief Secretary's Office personnel.
+                  </p>
                 </div>
               </motion.div>
             )}

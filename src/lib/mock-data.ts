@@ -34,7 +34,7 @@ export const USER_ROLES: { value: UserRole; label: string; count: number }[] = [
   { value: "divisional_commissioner", label: "Divisional Commissioner", count: 6 },
   { value: "chief_secretary", label: "Chief Secretary", count: 1 },
   { value: "cmo", label: "Chief Minister's Office", count: 5 },
-  { value: "system_admin", label: "Chief Secretary Office", count: 3 },
+  { value: "system_admin", label: "Chief Secretary Office", count: 2 },
 ];
 
 export type ActionableStatus = 

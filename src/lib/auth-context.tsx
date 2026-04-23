@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { UserRole } from "./mock-data";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
@@ -19,6 +20,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
 }
+
+const SESSION_KEY = "gs_portal_user";
 
 const MOCK_USERS: Record<UserRole, User> = {
   guardian_secretary: {
@@ -76,16 +79,46 @@ const MOCK_USERS: Record<UserRole, User> = {
   },
 };
 
-// Authorized CS Office user emails (no passwords stored client-side)
-export const CS_OFFICE_EMAILS = [
-  { name: "Pratik Bavi", email: "bavipratik@gmail.com" },
-  { name: "Rishikesh Shirke", email: "rishishirke65@gmail.com" },
-];
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Ensure the Supabase client has an authenticated session for RLS-protected writes.
+// Uses anonymous sign-in so the demo continues to work without real per-user accounts.
+async function ensureSupabaseSession() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      await supabase.auth.signInAnonymously();
+    }
+  } catch (err) {
+    console.warn("Anonymous session bootstrap failed:", err);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      return raw ? (JSON.parse(raw) as User) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Bootstrap an anonymous Supabase session on mount so RLS-protected
+  // INSERT/UPDATE/DELETE operations succeed.
+  useEffect(() => {
+    ensureSupabaseSession();
+  }, []);
+
+  // Persist user to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (user) sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      /* sessionStorage unavailable */
+    }
+  }, [user]);
 
   const login = (role: UserRole) => {
     setUser(MOCK_USERS[role]);
