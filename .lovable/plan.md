@@ -1,87 +1,70 @@
 
 
-# Backend Readiness Status & Final Wiring Plan
+# Plan: Final Mock-Data Cleanup + Working Alert Acknowledge
 
-## What's already deployed and working
+Most of the originally-listed items are already shipped (auth-adapter, Parichay button wired, officer directory with `parichay_uid` / `is_cso_admin` / "Login As", README external-DB guide, `docs/db/full_schema.sql`). The only outstanding work is the four cleanup items.
 
-**Database (12 tables, all RLS-enabled):** `officers`, `projects`, `tasks`, `meeting_minutes`, `visits`, `notifications`, `document_uploads`, `ai_insights`, `integrations`, `external_identities`, plus reference tables (districts, departments, project_categories, project_tags, guardian_secretaries) and link tables.
+---
 
-**Edge functions (4 deployed):**
-- `authenticate-cso` — CS Office email/password login with rate limiting ✅
-- `process-document` — PDF/CSV AI processing ✅
-- `generate-insights` — AI Insights via Lovable AI Gateway ✅
-- `parichay-callback` — SSO stub returning 501 until production credentials arrive ✅
+## 1. GOI Pending — remove fake mock numbers
 
-**Frontend live data:** Heat Map, Departments, Compliance, Dashboard, Login role counts, Integration Health all read from the database (no more hard-coded mocks).
+In `src/pages/GOIPendingPage.tsx`:
 
-## What's still pending from the approved plan
+- Delete the hard-coded `MINISTRY_DATA` array.
+- Replace the hard-coded `₹1,670 Cr` "Amount Blocked" stat with the live count of GOI items with no monetary figure (or hide the card until a real `amount` field exists).
+- Replace the hard-coded `8` "Ministries Involved" stat with a derived count from `goiItems` (using their `agency` field) — shows `0` on an empty DB.
+- Replace the Ministry-wise Distribution pie with either:
+  - a live aggregation grouped by `task.agency` (preferred), or
+  - an empty-state card "No GOI items recorded yet" when `goiItems.length === 0`.
 
-Three items from the last-approved plan were not completed:
+Result: empty DB → all zeros and an empty-state, not fake numbers.
 
-### 1. `src/lib/auth-adapter.ts` (MISSING)
-The pluggable login layer that would route between `loginWithParichay`, `loginWithCSO`, and `loginWithMockRole` — currently `auth-context.tsx` still has the hard-coded `MOCK_USERS` table inline, with no demo-mode gate.
+## 2. Alerts page — wire to real notifications + working acknowledge
 
-### 2. Officer Directory: `parichay_uid` field + "Login As" tool (MISSING)
-`UserManagementPage.tsx` and `OfficerFormDialog.tsx` don't expose the `parichay_uid` or `is_cso_admin` columns that the migration already added to the `officers` table. CS Office can't yet pre-map officers to their Parichay IDs, and there's no impersonation tool for support.
+Rewrite `src/pages/AlertsPage.tsx` to:
 
-### 3. External-DB migration prep (MISSING)
-No consolidated `_full_schema.sql` and no README section documenting the move to an external Postgres.
+- Delete the entire `MOCK_ALERTS` array.
+- Read live data from `useNotifications()` (already exists, already realtime-subscribed).
+- Map `notification.type` → severity level (`error` → `critical`, `warning` → `warning`, `info` → `info`, etc.), with sensible defaults.
+- Treat `is_read === false` as "unacknowledged".
+- Wire the **Acknowledge** button to call `markAsRead(notification.id)` (already exposed by the hook).
+- Wire the **Mark All Read** button to call `markAllAsRead()`.
+- Show empty-state "No alerts at this time" when the list is empty.
 
-## Plan to finish the backend
+Result: alerts now reflect real notifications, the Acknowledge button works, and the unread badge in the header (which already uses `useNotifications`) stays in sync.
 
-**A. Create `src/lib/auth-adapter.ts`**
-- `loginWithParichay(payload)` — calls `parichay-callback` edge function, looks up officer via `external_identities`, sets session
-- `loginWithCSO(email, password)` — wraps existing `authenticate-cso` flow
-- `loginWithMockRole(role)` — gated behind `import.meta.env.VITE_DEMO_MODE === "true"`; throws otherwise
-- `loginAsOfficer(officerId)` — CS Office impersonation; sets a `viewing_as` session flag
+## 3. State Governance Scorecard — no more fake fallback scores
 
-**B. Refactor `src/lib/auth-context.tsx`**
-- Remove inline `MOCK_USERS`; route all logins through the adapter
-- Add `viewingAs` state + `stopImpersonating()` for the CS Office "Login As" feature
-- Keep anonymous Supabase session bootstrap (needed for RLS writes)
+In `src/pages/GovernanceScorecardPage.tsx`, the live aggregation is already in place, but each metric falls back to `50`/`70` when there's no data — which renders as fake-looking scores on an empty DB. Fix:
 
-**C. Update `src/components/AppLayout.tsx`**
-- Add an amber banner "Viewing as <name> — Return to your account" when `viewingAs` is set
+- When a district has zero projects/tasks/visits, return `null` for that sub-score (not `50`/`70`).
+- Compute the composite only over non-null sub-scores; if **all** sub-scores are null, mark the district as "No data" and skip ranking.
+- Render `—` for null sub-scores in the table and show a "No data — awaiting first project / visit / actionable" badge for those districts.
+- Empty-state message above the table when **every** district is "No data": "Scorecard activates once tasks and visits are recorded."
+- Top 15 chart only renders districts with a real composite score.
 
-**D. Extend `src/components/OfficerFormDialog.tsx`**
-- Add `Parichay UID` text field (optional)
-- Add `Mark as CS Office Admin` switch (writes to `is_cso_admin`)
+Result: scorecard honestly shows "no data" on a fresh deployment instead of a sea of 50/70 placeholder scores.
 
-**E. Extend `src/pages/UserManagementPage.tsx`**
-- Add "Login As" action button per row (visible only to `chief_secretary` and `system_admin`)
-- Show Parichay UID column when present
+## 4. Confirm no other transactional mocks remain
 
-**F. Update `src/hooks/use-data.ts`**
-- `useCreateOfficer` / `useUpdateOfficer` to pass through `parichay_uid` and `is_cso_admin`
+Spot-check after edits: search `src/pages` for any remaining hard-coded arrays (e.g., `MINISTRY_DATA`, `MOCK_*`, hard-coded "Cr" amounts). Remove anything that doesn't trace back to a database query or an enum/config in `src/lib/mock-data.ts`.
 
-**G. Migration prep**
-- Generate `supabase/migrations/_full_schema.sql` consolidating the 9 existing migrations into one portable Postgres-compatible script (uses only `pgcrypto`)
-- Add a "Moving to External Postgres" section to `README.md` covering: env vars, RLS replay, `documents` storage bucket re-creation on S3/MinIO, edge function porting
-
-**H. Login page wiring**
-- Replace the direct `login(role)` call on demo role buttons with `authAdapter.loginWithMockRole(role)` so the demo gate is enforced
-- Wire the Parichay button to call `authAdapter.loginWithParichay()` (which calls the 501 stub today, real OAuth later)
+---
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/lib/auth-adapter.ts` | **New** — pluggable login adapter |
-| `src/lib/auth-context.tsx` | Use adapter; add impersonation state |
-| `src/components/AppLayout.tsx` | "Viewing as" banner |
-| `src/components/OfficerFormDialog.tsx` | Add `parichay_uid` + `is_cso_admin` fields |
-| `src/pages/UserManagementPage.tsx` | "Login As" action + Parichay UID column |
-| `src/hooks/use-data.ts` | Pass new officer fields through |
-| `src/pages/LoginPage.tsx` | Route via adapter; gate mock logins |
-| `supabase/migrations/_full_schema.sql` | **New** — consolidated portable schema |
-| `README.md` | External-DB migration guide |
+| `src/pages/GOIPendingPage.tsx` | Remove `MINISTRY_DATA`, hard-coded ₹/ministries; live aggregation + empty state |
+| `src/pages/AlertsPage.tsx` | Replace `MOCK_ALERTS` with `useNotifications`; wire Acknowledge / Mark All Read |
+| `src/pages/GovernanceScorecardPage.tsx` | Drop `50`/`70` fallbacks; render "No data" when district has no records |
+
+---
 
 ## What this delivers
 
-After this batch, the backend is **fully production-ready**:
-- One adapter, one swap-point for e-Parichay (only the `parichay-callback` function body changes when credentials arrive)
-- CS Office can pre-map every officer to their Parichay UID today
-- CS Office can impersonate any officer for support
-- A single SQL file replays the entire schema on any external Postgres
-- Demo-role buttons disabled in production builds (no `VITE_DEMO_MODE=true`)
+- Empty database → empty-state UI everywhere; no remaining "demo" numbers.
+- The Acknowledge button on alerts actually marks notifications read (and the header bell badge updates in real time).
+- Governance Scorecard honestly reflects real activity instead of inventing a baseline.
+- Combined with the already-shipped auth-adapter, Parichay-wired login, officer directory with `parichay_uid` + "Login As", and the `docs/db/full_schema.sql` migration script, the portal is now ready for the external-Postgres cutover and the e-Parichay rollout.
 
