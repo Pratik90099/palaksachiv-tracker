@@ -21,6 +21,7 @@ interface InsightRow {
 }
 
 export default function InsightsPage() {
+  const { user } = useAuth();
   const [latest, setLatest] = useState<InsightRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -42,7 +43,9 @@ export default function InsightsPage() {
   const generate = async () => {
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-insights");
+      const { data, error } = await supabase.functions.invoke("generate-insights", {
+        headers: user?.email ? { "x-cso-email": user.email } : undefined,
+      });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success("Insights generated");
