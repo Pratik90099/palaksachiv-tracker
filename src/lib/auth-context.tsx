@@ -1,83 +1,36 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { UserRole } from "./mock-data";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AuthUser,
+  loginWithMockRole as adapterMockLogin,
+  loginAsOfficer as adapterLoginAs,
+} from "./auth-adapter";
 
-interface User {
-  id: string;
-  name: string;
-  designation: string;
-  role: UserRole;
-  district?: string;
-  division?: string;
-  department?: string;
-  email: string;
-}
+type User = AuthUser;
 
 interface AuthContextType {
   user: User | null;
+  /** Original (non-impersonated) user, if currently impersonating */
+  realUser: User | null;
+  /** True when the current session is impersonating another officer */
+  viewingAs: boolean;
+  /** Demo-only role login. Throws in production. */
   login: (role: UserRole) => void;
+  /** Set a CSO-authenticated user from edge-function payload. */
   loginWithCSOData: (userData: { id: string; name: string; email: string; designation: string; role: string }) => void;
+  /** Set a fully-formed user (used by Parichay SSO and the adapter). */
+  setUserFromAdapter: (user: User) => void;
+  /** CS Office: impersonate another officer by id. */
+  impersonateOfficer: (officerId: string) => Promise<void>;
+  /** Return to the real user account after impersonation. */
+  stopImpersonating: () => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
 
 const SESSION_KEY = "gs_portal_user";
-
-const MOCK_USERS: Record<UserRole, User> = {
-  guardian_secretary: {
-    id: "gs-001",
-    name: "Shri. O P Gupta, IAS",
-    designation: "Additional Chief Secretary, Finance",
-    role: "guardian_secretary",
-    district: "Pune",
-    email: "acs.finance@maharashtra.gov.in",
-  },
-  department_secretary: {
-    id: "ds-001",
-    name: "Shri. Milind Mhaiskar, IAS",
-    designation: "Additional Chief Secretary, Public Works Department",
-    role: "department_secretary",
-    department: "Public Works Department (PWD)",
-    email: "acs.pwd@maharashtra.gov.in",
-  },
-  district_collector: {
-    id: "dc-001",
-    name: "Shri. Jitendra Dudi, IAS",
-    designation: "District Collector, Pune",
-    role: "district_collector",
-    district: "Pune",
-    email: "collector.pune@maharashtra.gov.in",
-  },
-  divisional_commissioner: {
-    id: "divc-001",
-    name: "Dr. Vijay Namdeo Suryawanshi, IAS",
-    designation: "Divisional Commissioner, Konkan Division",
-    role: "divisional_commissioner",
-    division: "Konkan",
-    email: "divcom.konkan@maharashtra.gov.in",
-  },
-  chief_secretary: {
-    id: "cs-001",
-    name: "Shri. Rajesh Aggarwal, IAS",
-    designation: "Chief Secretary, Government of Maharashtra",
-    role: "chief_secretary",
-    email: "cs@maharashtra.gov.in",
-  },
-  cmo: {
-    id: "cmo-001",
-    name: "CMO Team",
-    designation: "Chief Minister's Office",
-    role: "cmo",
-    email: "cmo@maharashtra.gov.in",
-  },
-  system_admin: {
-    id: "admin-001",
-    name: "CS Office Team",
-    designation: "Chief Secretary's Office",
-    role: "system_admin",
-    email: "cs.office@maharashtra.gov.in",
-  },
-};
+const REAL_USER_KEY = "gs_portal_real_user";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -104,6 +57,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  const [realUser, setRealUser] = useState<User | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(REAL_USER_KEY);
+      return raw ? (JSON.parse(raw) as User) : null;
+    } catch {
+      return null;
+    }
+  });
+
   // Bootstrap an anonymous Supabase session on mount so RLS-protected
   // INSERT/UPDATE/DELETE operations succeed.
   useEffect(() => {
@@ -120,8 +82,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  useEffect(() => {
+    try {
+      if (realUser) sessionStorage.setItem(REAL_USER_KEY, JSON.stringify(realUser));
+      else sessionStorage.removeItem(REAL_USER_KEY);
+    } catch {
+      /* sessionStorage unavailable */
+    }
+  }, [realUser]);
+
   const login = (role: UserRole) => {
-    setUser(MOCK_USERS[role]);
+    setUser(adapterMockLogin(role));
   };
 
   const loginWithCSOData = (userData: { id: string; name: string; email: string; designation: string; role: string }) => {
@@ -131,15 +102,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       designation: userData.designation,
       role: userData.role as UserRole,
       email: userData.email,
+      is_cso_admin: true,
     });
+  };
+
+  const setUserFromAdapter = (u: User) => setUser(u);
+
+  const impersonateOfficer = async (officerId: string) => {
+    if (!user) throw new Error("Not authenticated");
+    // Only allow CS Office, system_admin, or chief_secretary to impersonate
+    if (!user.is_cso_admin && user.role !== "system_admin" && user.role !== "chief_secretary") {
+      throw new Error("Not authorized to impersonate");
+    }
+    const target = await adapterLoginAs(officerId);
+    setRealUser(user);
+    setUser(target);
+  };
+
+  const stopImpersonating = () => {
+    if (realUser) {
+      setUser(realUser);
+      setRealUser(null);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    setRealUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithCSOData, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        realUser,
+        viewingAs: !!realUser,
+        login,
+        loginWithCSOData,
+        setUserFromAdapter,
+        impersonateOfficer,
+        stopImpersonating,
+        logout,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
