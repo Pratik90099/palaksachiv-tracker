@@ -1,117 +1,109 @@
 
 
-# Plan: Production Cleanup + Officer Assignment + AI Insights
+# Plan: Remove Frontend Mock Data + e-Parichay Readiness + Integration Truth
 
-## Goal
-Clear demo data, give Chief Secretary + CS Office full user/officer management with direct assignment of projects and tasks to specific officers (also from meeting minutes), and add an AI Insights layer.
+## What's actually wrong (critical findings)
 
----
+### 1. Database is clean ✅ — but UI still shows fake numbers
+DB tables (`projects`, `tasks`, `visits`, `notifications`, `meeting_minutes`) all return **0 rows**. The "demo data not removed" feeling comes from **hard-coded constants in `src/lib/mock-data.ts`** that several pages still render directly:
 
-## Part 1 — Clean Demo Data
+| Page | What it shows from mock | Reality |
+|---|---|---|
+| **Heat Map** | `MOCK_HEAT_DATA` — 36 random scores per refresh | No real district scoring |
+| **Departments** | `DEPARTMENT_PERFORMANCE` — hard-coded scores | Fake |
+| **Compliance** | `GS_COMPLIANCE` from MAHARASHTRA_DISTRICTS slice | Fake |
+| **Dashboard charts** | `QUARTERLY_DATA`, `DEPARTMENT_PERFORMANCE` | Fake |
+| **Critical Issues / Reports / Escalations** | `MOCK_ACTIONABLES` (10 fake rows), `MOCK_VISITS` (6 fake rows) | Fake |
+| **Login role counts** | `USER_ROLES` count badges (36, 45, 36...) | Hard-coded |
 
-Wipe transactional demo data while keeping **reference data** (districts, departments, guardian secretaries, categories, tags) intact.
+### 2. Integration Health is **fake** — PRAGATI is NOT integrated
+`IntegrationHealthPage.tsx` is a **static array** of 10 hard-coded entries (PRAGATI, PFMS, GeM, e-Taal, etc.) with random "lastSync" timestamps and a fake spinning refresh button. **Zero real API calls** to any external system. This must be honestly labeled.
 
-Insert (DELETE) statements to clear:
-- `projects` (10 rows) and dependent rows in `project_districts`, `project_departments`, `project_tag_assignments`
-- `tasks` (12 rows) and dependent rows in `task_districts`, `task_departments`
-- `meeting_minutes` (already 0)
-- `visits` (already 0)
-- `notifications` (4 rows)
-- `document_uploads` (already 0)
-
-Kept as-is: districts (36), departments (16), guardian_secretaries (36), project_categories (6), project_tags (16) — these are the master lists the system needs to operate from day one.
-
-Also remove the hard-coded `MOCK_USERS` array in `UserManagementPage.tsx` so the User Management page reads live data from the database (see Part 2).
-
----
-
-## Part 2 — Officer Directory + Direct Assignment
-
-### 2A. New `officers` table (single source of truth for assignable people)
-
-Migration creates `officers` table:
-- `id uuid pk`, `name text`, `designation text`, `email text unique`, `role text` (one of the 7 UserRole values), `district_id uuid?`, `department_id uuid?`, `is_active boolean default true`, timestamps
-- RLS: public read, authenticated write (matches current pattern)
-- Seed it once with the existing 36 guardian_secretaries + a Chief Secretary entry, so the directory is non-empty on first load
-
-### 2B. Add `assigned_officer_id` to `projects` and `tasks`
-
-Migration adds `assigned_officer_id uuid` (nullable) to both `projects` and `tasks`. The existing `responsible_officer` text column on `tasks` stays (legacy free-text), but the new column is the structured link used for filtering and "what's assigned to me".
-
-### 2C. User Management page becomes the Officers CRUD
-
-`UserManagementPage.tsx` rewritten to:
-- Read officers from the `officers` table via a new `useOfficers()` hook
-- Add/Edit/Deactivate officers via a new `OfficerFormDialog` — fields: name, designation, role, district, department, email
-- Search + role filter (existing UI preserved)
-- Visible to `system_admin` and `chief_secretary`
-
-New hooks in `use-data.ts`: `useOfficers`, `useCreateOfficer`, `useUpdateOfficer`, `useDeleteOfficer`.
-
-### 2D. Assign officer in Project & Task forms
-
-In `ProjectFormDialog.tsx` and `TaskFormDialog.tsx`, add an **"Assign to Officer"** dropdown populated from `useOfficers()`, optionally filtered by selected districts/departments. Saves to `assigned_officer_id`.
-
-### 2E. Assign officer from Meeting Minutes action items
-
-In `RecordMinutesPage.tsx`, alongside each action item add a small "Assign to" picker (officer dropdown). The existing **"Convert to Task"** / **"Convert All to Tasks"** flows pass `assigned_officer_id` into `useCreateTask`, so a task created from minutes shows up immediately on that officer's dashboard.
-
-### 2F. Officer-scoped views ("reflects to respective user")
-
-Extend `use-role-filter.ts` so when the logged-in user matches an officer (by email), `filterProjects()` and `filterTasks()` also return items where `assigned_officer_id === currentOfficer.id`. The Dashboard, Projects, and Actionables pages already call these filters, so the assigned items will appear in that officer's views automatically. Add a small **"Assigned to me"** badge/section on the Dashboard.
+### 3. e-Parichay readiness gap
+- Login page already shows a "Sign in with Parichay SSO" button — but it's a **dead button** (no onClick).
+- `auth-context.tsx` uses anonymous Supabase sign-in for RLS, hard-coded `MOCK_USERS` for non-CSO roles.
+- No mapping layer between an e-Parichay identity (typically `parichay_uid` / official email) and the `officers` table.
 
 ---
 
-## Part 3 — AI Insights Layer
+## Changes
 
-### 3A. New edge function `generate-insights`
+### Step 1 — Wipe remaining demo data + replace with live queries
 
-`supabase/functions/generate-insights/index.ts`:
-- Reads aggregated, **non-PII** stats server-side (counts by status, overdue count, critical count, GOI-pending count, top 5 stuck districts/departments, recent meeting decisions count)
-- Sends only the aggregated summary to Lovable AI (`google/gemini-2.5-flash`) — never raw rows
-- Returns structured JSON: `{ headline, key_insights: string[], risks: string[], recommendations: string[] }` enforced via tool-calling schema
-- CORS, Zod input validation, 429/402 error pass-through
+**Delete** from `src/lib/mock-data.ts`: `MOCK_ACTIONABLES`, `MOCK_VISITS`, `MOCK_HEAT_DATA`, `DASHBOARD_STATS`, `QUARTERLY_DATA`, `DEPARTMENT_PERFORMANCE`. Keep only enums and configs (`USER_ROLES`, `STATUS_CONFIG`, `PRIORITY_CONFIG`, `MAHARASHTRA_DISTRICTS`, `DIVISIONS`, `ISSUE_CATEGORIES`, `DEPARTMENTS` as reference lists).
 
-### 3B. New page `InsightsPage.tsx` at `/insights`
+**Rewrite to use live data:**
+- `HeatMapPage.tsx` — compute district scores from `tasks` + `visits` joined by district. Empty state: "No data yet — scores appear once tasks are recorded."
+- `DepartmentsPage.tsx` — aggregate `tasks` grouped by department.
+- `CompliancePage.tsx` — derive GS compliance from real `visits` per district.
+- `DashboardPage.tsx` — replace `QUARTERLY_DATA` / `DEPARTMENT_PERFORMANCE` with live aggregations from `useTasks()`/`useProjects()`.
+- `CriticalIssuesPage.tsx`, `EscalationsPage.tsx`, `GOIPendingPage.tsx`, `ReportsPage.tsx` — confirm they all use `useTasks()` / `useProjects()` filters (not MOCK_ACTIONABLES).
+- `LoginPage.tsx` — fetch role counts from `officers` table grouped by role instead of hard-coded `count`.
 
-- Header: "AI Insights & Recommendations"
-- "Generate Insights" button → calls the edge function, renders the four sections in cards
-- Refresh button + last-generated timestamp
-- Stored in a new `ai_insights` table (id, generated_at, payload jsonb, generated_by) so insights persist between sessions
-- Sidebar entry with `Sparkles` icon, gated to `chief_secretary`, `cmo`, `system_admin`, `divisional_commissioner`
+### Step 2 — Make Integration Health honest
 
-### 3C. Dashboard mini-insight widget
+Two options for the user to choose at execution time (default: **A**):
 
-Small card on `DashboardPage.tsx` showing the latest insight `headline` + top 1 recommendation, with a "View all insights" link.
+- **A. Mark as "Planned"**: Replace the static list with a "Coming Soon" panel listing planned integrations and their status (`Planned`, `In Discussion`, `Live`). Persist in a new `integrations` table so CS Office can edit status from the UI. No fake "99.9% uptime" numbers.
+- **B. Hide the page** entirely until real connectors exist; remove sidebar entry for non-admins.
+
+### Step 3 — e-Parichay readiness layer
+
+Since e-Parichay SSO requires production-only credentials and a government-issued OAuth client, build a **pluggable adapter** now so the swap-in is a one-line change later:
+
+1. **New table `external_identities`**:
+   `id, officer_id (fk → officers), provider ('parichay' | 'email' | 'cso'), external_uid, email, last_login_at, is_active`
+2. **New `auth-adapter.ts`** module exporting:
+   ```
+   loginWithParichay(parichayPayload) → looks up external_identities → loads officer → sets session
+   loginWithCSO(email, password)      → existing flow
+   loginWithMockRole(role)            → demo only, gated by VITE_DEMO_MODE
+   ```
+3. **Login page**: wire the existing "Sign in with Parichay SSO" button to call a `parichay-callback` edge function stub (returns 501 + "Awaiting Parichay client credentials"). This makes the integration point visible and testable.
+4. **Officer Directory** gets two new fields: `parichay_uid` (text, optional) and `is_cso_admin` (boolean). When CS Office adds an officer, they enter the Parichay UID — and that officer auto-logs-in via SSO once Parichay is wired.
+5. **Migration on a future swap**: only the `parichay-callback` edge function body changes; everything else (officer rows, RLS, role checks) already works.
+
+### Step 4 — CS Office full admin access (confirm + tighten)
+
+- `system_admin` role already has access to: User Management, Settings, Document AI, Meeting Minutes.
+- Add `system_admin` to `Insights` route guard if missing.
+- Add a **"Login As" tool** on the Officer Directory (CS Office only) — lets CS Office impersonate any officer for support/debugging, with a banner "Viewing as <name>". Useful before Parichay rollout.
+- Document in code that `system_admin` bypasses all role-scoped filters in `use-role-filter.ts` (already true, just add a comment).
+
+### Step 5 — External DB migration prep
+
+You said the project will move to an external DB soon. Two prep steps:
+
+1. **Generate a portable schema dump**: emit `supabase/migrations/_full_schema.sql` (one consolidated file) that any Postgres can replay — no Supabase-specific extensions outside `pgcrypto`.
+2. **Document the external-DB swap** in `README.md`: env-var changes, how to re-run RLS policies, how to re-create the `documents` storage bucket on a non-Supabase host (S3/MinIO).
 
 ---
 
-## Files Changed
+## Files changed
 
 | File | Change |
 |---|---|
-| `supabase/migrations/<new>.sql` | Create `officers`, `ai_insights` tables; add `assigned_officer_id` to `projects` and `tasks`; seed officers from existing GS list |
-| (data wipe via insert tool) | DELETE rows in `projects`, `tasks`, link tables, `notifications` |
-| `src/hooks/use-data.ts` | Add `useOfficers`, `useCreateOfficer`, `useUpdateOfficer`, `useDeleteOfficer`; include `assigned_officer_id` in project/task create/update |
-| `src/hooks/use-role-filter.ts` | Add officer-id–based filter branch |
-| `src/components/OfficerFormDialog.tsx` | New — add/edit officer |
-| `src/pages/UserManagementPage.tsx` | Rewrite to read live `officers` data, with CRUD UI |
-| `src/components/ProjectFormDialog.tsx` | Add "Assign to Officer" dropdown |
-| `src/components/TaskFormDialog.tsx` | Add "Assign to Officer" dropdown |
-| `src/pages/RecordMinutesPage.tsx` | Per-action-item officer picker; pass through to task creation |
-| `supabase/functions/generate-insights/index.ts` | New AI edge function |
-| `src/pages/InsightsPage.tsx` | New page |
-| `src/components/AppSidebar.tsx` | Add "AI Insights" nav item |
-| `src/App.tsx` | Add `/insights` route under role guard |
-| `src/pages/DashboardPage.tsx` | Add mini-insight widget + "Assigned to me" section |
+| `src/lib/mock-data.ts` | Strip transactional mocks; keep enums/configs only |
+| `src/pages/HeatMapPage.tsx` | Live data from tasks + visits |
+| `src/pages/DepartmentsPage.tsx` | Live aggregation |
+| `src/pages/CompliancePage.tsx` | Live GS compliance |
+| `src/pages/DashboardPage.tsx` | Live charts; remove `QUARTERLY_DATA` import |
+| `src/pages/LoginPage.tsx` | Live role counts; wire Parichay button |
+| `src/pages/IntegrationHealthPage.tsx` | "Planned integrations" with editable status |
+| `supabase/migrations/<new>.sql` | `external_identities` table; `integrations` table; `parichay_uid` + `is_cso_admin` columns on `officers` |
+| `src/lib/auth-adapter.ts` (new) | Pluggable login adapter |
+| `src/lib/auth-context.tsx` | Use adapter; gate mock login behind `VITE_DEMO_MODE` |
+| `supabase/functions/parichay-callback/index.ts` (new) | Stub returning 501 with clear message |
+| `src/pages/UserManagementPage.tsx` | Add Parichay UID field + "Login As" |
+| `README.md` | External-DB migration guide |
 
 ---
 
-## Deployment-Ready Checklist (delivered after this batch)
+## What this delivers
 
-- Database is empty of demo transactions; reference data ready to use
-- Chief Secretary can add officers and assign projects/tasks/meeting action items directly
-- Each officer sees their assigned items on login
-- AI Insights generates state-wide summary on demand without exposing raw data
-- All new endpoints follow existing RLS pattern (public read, authenticated write) and Zod input validation
+- All UI numbers come from the real database — empty until CS Office enters work.
+- Integration Health honestly shows "Planned" instead of fake PRAGATI uptime.
+- e-Parichay SSO has a real, stub-able plug point — flipping it on later requires only filling the `parichay-callback` edge function with the production OAuth handshake.
+- CS Office retains full admin + "Login As" for support.
+- One consolidated schema file ready for the external-DB migration.
 
