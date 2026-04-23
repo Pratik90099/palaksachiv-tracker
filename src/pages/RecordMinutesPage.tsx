@@ -40,7 +40,7 @@ function useCreateMinutes() {
       minutes_text: string;
       decisions?: string[];
       action_items?: string[];
-      related_project_id?: string;
+      related_project_id?: string | null;
     }) => {
       const { data, error } = await supabase.from("meeting_minutes").insert(input).select().single();
       if (error) throw error;

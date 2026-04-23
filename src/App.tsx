@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AppLayout } from "@/components/AppLayout";
+import { UserRole } from "@/lib/mock-data";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ActionablesPage from "./pages/ActionablesPage";
@@ -38,6 +39,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+function RoleProtectedRoute({
+  roles,
+  children,
+}: {
+  roles: UserRole[];
+  children: React.ReactNode;
+}) {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
+  if (!roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
+  return <AppLayout>{children}</AppLayout>;
+}
+
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
@@ -60,13 +74,36 @@ function AppRoutes() {
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
-      <Route path="/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/category-dashboard" element={<ProtectedRoute><CategoryTagDashboard /></ProtectedRoute>} />
       <Route path="/integration-health" element={<ProtectedRoute><IntegrationHealthPage /></ProtectedRoute>} />
       <Route path="/governance-scorecard" element={<ProtectedRoute><GovernanceScorecardPage /></ProtectedRoute>} />
-      <Route path="/meeting-minutes" element={<ProtectedRoute><RecordMinutesPage /></ProtectedRoute>} />
-      <Route path="/document-ai" element={<ProtectedRoute><DocumentAIPage /></ProtectedRoute>} />
+
+      {/* Role-restricted routes */}
+      <Route
+        path="/document-ai"
+        element={<RoleProtectedRoute roles={["system_admin"]}><DocumentAIPage /></RoleProtectedRoute>}
+      />
+      <Route
+        path="/meeting-minutes"
+        element={
+          <RoleProtectedRoute roles={["system_admin", "chief_secretary"]}>
+            <RecordMinutesPage />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <RoleProtectedRoute roles={["system_admin", "chief_secretary"]}>
+            <UserManagementPage />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={<RoleProtectedRoute roles={["system_admin"]}><SettingsPage /></RoleProtectedRoute>}
+      />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
