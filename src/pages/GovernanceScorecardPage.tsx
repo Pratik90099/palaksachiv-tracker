@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useProjects, useTasks, useVisits, useDistricts } from "@/hooks/use-data";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, TrendingUp, TrendingDown, Minus, MapPin, X, FolderKanban, ClipboardList, Calendar, ChevronRight } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Minus, MapPin, X, FolderKanban, ClipboardList, Calendar, ChevronRight, Inbox } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,19 @@ import { StatusBadge } from "@/components/StatusBadge";
 interface DistrictScore {
   districtId: string;
   name: string;
-  projectHealth: number;
-  visitCompliance: number;
-  actionableResolution: number;
-  schemePendency: number;
-  composite: number;
+  projectHealth: number | null;
+  visitCompliance: number | null;
+  actionableResolution: number | null;
+  schemePendency: number | null;
+  composite: number | null;
 }
+
+const WEIGHTS = {
+  projectHealth: 0.3,
+  actionableResolution: 0.3,
+  visitCompliance: 0.25,
+  schemePendency: 0.15,
+};
 
 export default function GovernanceScorecardPage() {
   const { data: projects } = useProjects();
@@ -31,29 +38,47 @@ export default function GovernanceScorecardPage() {
       const distProjects = (projects || []).filter((p: any) =>
         p.project_districts?.some((pd: any) => pd.districts?.id === district.id)
       );
-      const healthyProjects = distProjects.filter((p: any) =>
-        ["on_track", "in_progress", "closed", "completed_pending_closure"].includes(p.status)
-      );
-      const projectHealth = distProjects.length > 0 ? Math.round((healthyProjects.length / distProjects.length) * 100) : 50;
+      const projectHealth = distProjects.length > 0
+        ? Math.round(
+            (distProjects.filter((p: any) =>
+              ["on_track", "in_progress", "closed", "completed_pending_closure"].includes(p.status)
+            ).length / distProjects.length) * 100
+          )
+        : null;
 
       const distVisits = (visits || []).filter((v: any) => v.district_id === district.id);
-      const completedVisits = distVisits.filter((v: any) => v.status === "completed");
-      const visitCompliance = distVisits.length > 0 ? Math.round((completedVisits.length / distVisits.length) * 100) : 50;
+      const visitCompliance = distVisits.length > 0
+        ? Math.round(
+            (distVisits.filter((v: any) => v.status === "completed").length / distVisits.length) * 100
+          )
+        : null;
 
       const distTasks = (tasks || []).filter((t: any) =>
         t.task_districts?.some((td: any) => td.districts?.id === district.id)
       );
-      const resolvedTasks = distTasks.filter((t: any) =>
-        ["closed", "completed_pending_closure"].includes(t.status)
-      );
-      const actionableResolution = distTasks.length > 0 ? Math.round((resolvedTasks.length / distTasks.length) * 100) : 50;
+      const actionableResolution = distTasks.length > 0
+        ? Math.round(
+            (distTasks.filter((t: any) =>
+              ["closed", "completed_pending_closure"].includes(t.status)
+            ).length / distTasks.length) * 100
+          )
+        : null;
 
-      const pendingTasks = distTasks.filter((t: any) => t.is_goi_pending);
-      const schemePendency = distTasks.length > 0 ? Math.round(100 - (pendingTasks.length / distTasks.length) * 100) : 70;
+      const schemePendency = distTasks.length > 0
+        ? Math.round(100 - (distTasks.filter((t: any) => t.is_goi_pending).length / distTasks.length) * 100)
+        : null;
 
-      const composite = Math.round(
-        projectHealth * 0.3 + visitCompliance * 0.25 + actionableResolution * 0.3 + schemePendency * 0.15
-      );
+      // Composite over non-null sub-scores only, re-normalized weights
+      const parts: { value: number; weight: number }[] = [];
+      if (projectHealth !== null) parts.push({ value: projectHealth, weight: WEIGHTS.projectHealth });
+      if (actionableResolution !== null) parts.push({ value: actionableResolution, weight: WEIGHTS.actionableResolution });
+      if (visitCompliance !== null) parts.push({ value: visitCompliance, weight: WEIGHTS.visitCompliance });
+      if (schemePendency !== null) parts.push({ value: schemePendency, weight: WEIGHTS.schemePendency });
+
+      const totalWeight = parts.reduce((s, p) => s + p.weight, 0);
+      const composite = parts.length === 0
+        ? null
+        : Math.round(parts.reduce((s, p) => s + p.value * p.weight, 0) / totalWeight);
 
       return {
         districtId: district.id,
@@ -64,12 +89,21 @@ export default function GovernanceScorecardPage() {
         schemePendency,
         composite,
       };
-    }).sort((a, b) => b.composite - a.composite);
+    }).sort((a, b) => {
+      // Ranked districts first (desc by composite), then "no data" districts alphabetically
+      if (a.composite === null && b.composite === null) return a.name.localeCompare(b.name);
+      if (a.composite === null) return 1;
+      if (b.composite === null) return -1;
+      return b.composite - a.composite;
+    });
   }, [districts, projects, tasks, visits]);
 
-  const topChart = scores.slice(0, 15).map(s => ({
+  const rankedScores = scores.filter(s => s.composite !== null);
+  const allNoData = scores.length > 0 && rankedScores.length === 0;
+
+  const topChart = rankedScores.slice(0, 15).map(s => ({
     name: s.name.length > 10 ? s.name.slice(0, 10) + "…" : s.name,
-    Score: s.composite,
+    Score: s.composite as number,
   }));
 
   // Drill-down data for selected district
@@ -92,21 +126,29 @@ export default function GovernanceScorecardPage() {
   const getRankBadge = (rank: number) => {
     if (rank <= 3) return "bg-gov-gold/20 text-gov-gold border border-gov-gold/30";
     if (rank <= 10) return "bg-gov-success-light text-gov-success";
-    if (rank >= scores.length - 4) return "bg-gov-danger-light text-gov-danger";
+    if (rank >= rankedScores.length - 4) return "bg-gov-danger-light text-gov-danger";
     return "bg-muted text-muted-foreground";
   };
 
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score: number | null) => {
+    if (score === null) return "text-muted-foreground";
     if (score >= 75) return "text-gov-success";
     if (score >= 50) return "text-gov-warning";
     return "text-gov-danger";
   };
 
-  const getTrend = (score: number) => {
+  const getTrend = (score: number | null) => {
+    if (score === null) return <Minus className="h-3 w-3 text-muted-foreground/40" />;
     if (score >= 70) return <TrendingUp className="h-3 w-3 text-gov-success" />;
     if (score >= 45) return <Minus className="h-3 w-3 text-muted-foreground" />;
     return <TrendingDown className="h-3 w-3 text-gov-danger" />;
   };
+
+  const renderSubScore = (value: number | null) => (
+    <p className={`text-xs font-bold ${getScoreColor(value)}`}>
+      {value === null ? "—" : value}
+    </p>
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -117,9 +159,19 @@ export default function GovernanceScorecardPage() {
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg">
           <Trophy className="h-3.5 w-3.5 text-gov-gold" />
-          {scores.length} districts ranked
+          {rankedScores.length} of {scores.length} districts ranked
         </div>
       </div>
+
+      {allNoData && (
+        <div className="gov-card-elevated p-6 text-center">
+          <Inbox className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+          <p className="text-sm font-medium text-foreground">Scorecard activates once tasks and visits are recorded</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Districts will appear with composite scores as soon as projects, actionables or visits are logged.
+          </p>
+        </div>
+      )}
 
       {/* Top districts chart */}
       {topChart.length > 0 && (
@@ -239,53 +291,59 @@ export default function GovernanceScorecardPage() {
       {/* District table */}
       <div className="space-y-2">
         {scores.map((district, i) => {
-          const cfg = {
-            healthy: "text-gov-success",
-            warning: "text-gov-warning", 
-            danger: "text-gov-danger",
-          };
+          const isRanked = district.composite !== null;
+          const rank = isRanked ? rankedScores.findIndex(s => s.districtId === district.districtId) + 1 : null;
           return (
             <motion.div
-              key={district.name}
+              key={district.districtId}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.02 }}
-              className={`gov-card-elevated p-3 cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all ${selectedDistrict === district.districtId ? "ring-2 ring-primary" : ""}`}
+              transition={{ delay: Math.min(i * 0.02, 0.5) }}
+              className={`gov-card-elevated p-3 cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all ${selectedDistrict === district.districtId ? "ring-2 ring-primary" : ""} ${!isRanked ? "opacity-75" : ""}`}
               onClick={() => setSelectedDistrict(district.districtId === selectedDistrict ? null : district.districtId)}
             >
               <div className="flex items-center gap-4">
-                <span className={`text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${getRankBadge(i + 1)}`}>
-                  {i + 1}
+                <span className={`text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${
+                  isRanked && rank ? getRankBadge(rank) : "bg-muted text-muted-foreground/60"
+                }`}>
+                  {isRanked ? rank : "—"}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <MapPin className="h-3 w-3 text-muted-foreground" />
                     <span className="text-sm font-semibold text-foreground">{district.name}</span>
                     {getTrend(district.composite)}
+                    {!isRanked && (
+                      <span className="text-[10px] gov-badge bg-muted text-muted-foreground">
+                        No data — awaiting first project / visit / actionable
+                      </span>
+                    )}
                     <ChevronRight className={`h-3 w-3 text-muted-foreground transition-transform ${selectedDistrict === district.districtId ? "rotate-90" : ""}`} />
                   </div>
                   <div className="grid grid-cols-4 gap-3 mt-2">
                     <div>
                       <p className="text-[10px] text-muted-foreground">Projects</p>
-                      <p className={`text-xs font-bold ${getScoreColor(district.projectHealth)}`}>{district.projectHealth}</p>
+                      {renderSubScore(district.projectHealth)}
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground">Visits</p>
-                      <p className={`text-xs font-bold ${getScoreColor(district.visitCompliance)}`}>{district.visitCompliance}</p>
+                      {renderSubScore(district.visitCompliance)}
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground">Actionables</p>
-                      <p className={`text-xs font-bold ${getScoreColor(district.actionableResolution)}`}>{district.actionableResolution}</p>
+                      {renderSubScore(district.actionableResolution)}
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground">Pendency</p>
-                      <p className={`text-xs font-bold ${getScoreColor(district.schemePendency)}`}>{district.schemePendency}</p>
+                      {renderSubScore(district.schemePendency)}
                     </div>
                   </div>
                 </div>
                 <div className="text-right shrink-0 w-16">
-                  <p className={`text-lg font-bold ${getScoreColor(district.composite)}`}>{district.composite}</p>
-                  <Progress value={district.composite} className="h-1.5 mt-1" />
+                  <p className={`text-lg font-bold ${getScoreColor(district.composite)}`}>
+                    {district.composite === null ? "—" : district.composite}
+                  </p>
+                  <Progress value={district.composite ?? 0} className="h-1.5 mt-1" />
                 </div>
               </div>
             </motion.div>
