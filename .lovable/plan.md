@@ -1,47 +1,37 @@
 
 
-# Plan: Remove Demo Mode Entirely
+# Plan: Upgrade AI Layer to Latest Gemini Model
 
-Strip all demo-mode scaffolding so the portal only authenticates via real flows (Parichay SSO + CS Office credentials). No more mock role buttons, no `VITE_DEMO_MODE` flag, no `MOCK_USERS` table.
+The portal already calls Google Gemini through the Lovable AI Gateway (no separate Gemini API key needed). Currently both AI edge functions hard-code `google/gemini-2.5-flash`. This plan upgrades the model to the latest **`google/gemini-3-flash-preview`** for better reasoning quality on insights and document extraction, with no code-architecture or cost-tier change.
 
 ## Changes
 
-### 1. `src/lib/auth-adapter.ts`
-- Delete the `MOCK_USERS` constant and the `loginWithMockRole()` function entirely.
-- Delete the `DEMO_MODE` constant and the `isDemoMode` export.
-- Keep only: `loginWithParichay()`, `loginWithCSO()`, `loginAsOfficer()` (CS Office impersonation).
+### 1. `supabase/functions/generate-insights/index.ts`
+- Replace `model: "google/gemini-2.5-flash"` with `model: "google/gemini-3-flash-preview"` in the AI gateway call.
+- Tool-calling structured output (headline / key_insights / risks / recommendations) stays unchanged.
 
-### 2. `src/lib/auth-context.tsx`
-- Remove any `login(role)` mock-role code path and any reference to `loginWithMockRole` / `isDemoMode`.
-- Auth context exposes only: `loginWithParichay`, `loginWithCSO`, `loginAsOfficer`, `stopImpersonating`, `logout`.
+### 2. `supabase/functions/process-document/index.ts`
+- Replace `model: "google/gemini-2.5-flash"` with `model: "google/gemini-3-flash-preview"` for document summarization, project extraction, task extraction, and action-item extraction.
+- All four `SYSTEM_PROMPTS` modes remain the same.
 
-### 3. `src/pages/LoginPage.tsx`
-- Remove the entire "Demo: Sign in as…" role-button section (the 7 mock role cards / role count chips that used `loginWithMockRole`).
-- Keep only two login paths:
-  - **Sign in with Parichay SSO** (primary, calls `loginWithParichay()`)
-  - **CS Office sign in** (email + password form, calls `loginWithCSO()`)
-- Remove the live role-count fetch from `officers` if it was only used to label demo buttons; keep it only if shown elsewhere on the page.
+### 3. `src/pages/InsightsPage.tsx`
+- Update the small footer label from `"Powered by Lovable AI · gemini-2.5-flash"` to `"Powered by Lovable AI · Gemini 3 Flash"` so the UI reflects the live model.
 
-### 4. `.env` / docs
-- Remove any `VITE_DEMO_MODE` references from `README.md` (external-DB migration guide) so operators don't think they need to set it.
-
-### 5. Sweep
-- Search the repo for `VITE_DEMO_MODE`, `loginWithMockRole`, `MOCK_USERS`, `isDemoMode`, `demo` (case-insensitive in auth/login files) and remove every remaining hit.
-- Confirm `tsc` is clean.
+### 4. Verification
+- After deploy, test "Generate Insights" once (CS Office) and one document upload to confirm both edge functions return successfully on the new model.
+- No DB schema, no new secrets, no new connectors.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/lib/auth-adapter.ts` | Delete `MOCK_USERS`, `loginWithMockRole`, `isDemoMode`, `DEMO_MODE` |
-| `src/lib/auth-context.tsx` | Drop mock-role login path |
-| `src/pages/LoginPage.tsx` | Remove demo role buttons; keep Parichay + CS Office only |
-| `README.md` | Strip `VITE_DEMO_MODE` mentions |
+| `supabase/functions/generate-insights/index.ts` | Model → `google/gemini-3-flash-preview` |
+| `supabase/functions/process-document/index.ts` | Model → `google/gemini-3-flash-preview` |
+| `src/pages/InsightsPage.tsx` | Footer label updated |
 
 ## What this delivers
 
-- Login page shows only the two real auth paths: Parichay SSO and CS Office credentials.
-- No code path remains that can mint a session from a hard-coded officer.
-- Production build and demo build are now identical — one less env var, one less surface area.
-- Until Parichay credentials arrive, only CS Office users can sign in (the SSO button surfaces the 501 stub message), which matches the production rollout intent.
+- AI Insights and Document AI now run on the latest Gemini Flash generation — sharper summaries and extraction with similar latency/cost to the existing flash tier.
+- No new infrastructure, no GCP project, no Parichay/auth changes.
+- LOVABLE_API_KEY (already configured) continues to authenticate every call; rate-limit and credits-exhausted handling already in place stays intact.
 
