@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Users, Shield, Search, Plus, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Users, Shield, Search, Plus, Mail, MapPin, Pencil, Trash2, LogIn, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { useOfficers, useDeleteOfficer } from "@/hooks/use-data";
 import { OfficerFormDialog } from "@/components/OfficerFormDialog";
+import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -21,10 +23,15 @@ const ROLE_LABEL: Record<string, string> = {
 export default function UserManagementPage() {
   const { data: officers, isLoading } = useOfficers();
   const deleteOfficer = useDeleteOfficer();
+  const { user, impersonateOfficer } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+
+  const canImpersonate =
+    !!user && (user.is_cso_admin || user.role === "system_admin" || user.role === "chief_secretary");
 
   const list = officers || [];
 
@@ -47,6 +54,17 @@ export default function UserManagementPage() {
       toast.success("Officer removed");
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  const handleImpersonate = async (officerId: string, name: string) => {
+    if (!confirm(`Login as "${name}"? You'll see the portal exactly as they do. Use the banner at the top to return to your account.`)) return;
+    try {
+      await impersonateOfficer(officerId);
+      toast.success(`Now viewing as ${name}`);
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "Could not switch user");
     }
   };
 
