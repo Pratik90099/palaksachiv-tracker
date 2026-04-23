@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,36 +11,35 @@ interface CsoUser {
   id: string;
   name: string;
   email: string;
-  password: string;
+  // Stored as bcrypt hash. Plaintext is no longer accepted.
+  password_hash: string;
 }
 
-// Default fallback (used when CSO_USERS_JSON secret is not configured).
-// Production deployments should set the CSO_USERS_JSON secret to rotate
-// credentials without a code change.
-const DEFAULT_USERS: CsoUser[] = [
-  { id: "cso-001", name: "Pratik Bavi", email: "bavipratik@gmail.com", password: "cso@2026" },
-  { id: "cso-002", name: "Rishikesh Shirke", email: "rishishirke65@gmail.com", password: "cso@2026" },
-];
-
-function loadUsers(): CsoUser[] {
+function loadUsers(): CsoUser[] | null {
   const raw = Deno.env.get("CSO_USERS_JSON");
-  if (!raw) return DEFAULT_USERS;
+  if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.every((u) => u && u.email && u.password && u.id && u.name)) {
+    if (
+      Array.isArray(parsed) &&
+      parsed.every(
+        (u) => u && u.email && u.password_hash && u.id && u.name,
+      )
+    ) {
       return parsed as CsoUser[];
     }
-    console.warn("CSO_USERS_JSON malformed; falling back to defaults.");
+    console.warn(
+      "CSO_USERS_JSON malformed — expected [{id,name,email,password_hash}].",
+    );
   } catch (e) {
-    console.warn("CSO_USERS_JSON parse error; falling back to defaults:", e);
+    console.warn("CSO_USERS_JSON parse error:", e);
   }
-  return DEFAULT_USERS;
+  return null;
 }
 
-// Constant-time string comparison to mitigate timing attacks
+// Constant-time string comparison for emails
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
-    // Still iterate to keep timing roughly constant
     let dummy = 0;
     for (let i = 0; i < a.length; i++) dummy |= a.charCodeAt(i);
     return false;
@@ -133,35 +133,66 @@ serve(async (req) => {
     return jsonResponse({ success: false, error: "Valid password is required" }, 400);
   }
 
+  const users = loadUsers();
+  if (!users) {
+    console.error(
+      "[authenticate-cso] CSO_USERS_JSON is not configured. Set this secret with bcrypt-hashed credentials in the format [{id,name,email,password_hash}].",
+    );
+    return jsonResponse(
+      {
+        success: false,
+        error:
+          "CSO authentication is not configured. Administrator must set the CSO_USERS_JSON secret.",
+      },
+      503,
+    );
+  }
+
   const normalizedEmail = email.toLowerCase().trim();
   console.log(`[authenticate-cso] attempt ip=${ip} email=${normalizedEmail}`);
 
-  const users = loadUsers();
-  let matched: CsoUser | null = null;
-  // Iterate ALL users to keep timing roughly uniform
+  // Find user by constant-time email compare across the whole list
+  let candidate: CsoUser | null = null;
   for (const u of users) {
     const emailMatch = timingSafeEqual(u.email.toLowerCase(), normalizedEmail);
-    const passwordMatch = timingSafeEqual(u.password, password);
-    if (emailMatch && passwordMatch) {
-      matched = u;
+    if (emailMatch) candidate = u;
+  }
+
+  let passwordOk = false;
+  if (candidate) {
+    try {
+      passwordOk = await bcrypt.compare(password, candidate.password_hash);
+    } catch (e) {
+      console.error("[authenticate-cso] bcrypt compare error:", e);
+      passwordOk = false;
+    }
+  } else {
+    // Perform a dummy hash compare to keep timing roughly uniform.
+    try {
+      await bcrypt.compare(
+        password,
+        "$2a$10$CwTycUXWue0Thq9StjUM0uJ8.JhE1m6QY8xZxRr1fUq7C9Gk5Y7iG",
+      );
+    } catch {
+      // ignore
     }
   }
 
-  if (!matched) {
+  if (!candidate || !passwordOk) {
     recordFailure(ip);
     return jsonResponse({ success: false, error: "Invalid email or password" }, 401);
   }
 
   clearAttempts(ip);
-  console.log(`[authenticate-cso] success ip=${ip} userId=${matched.id}`);
+  console.log(`[authenticate-cso] success ip=${ip} userId=${candidate.id}`);
 
   return jsonResponse(
     {
       success: true,
       user: {
-        id: matched.id,
-        name: matched.name,
-        email: matched.email,
+        id: candidate.id,
+        name: candidate.name,
+        email: candidate.email,
         designation: "Chief Secretary's Office",
         role: "system_admin",
       },
