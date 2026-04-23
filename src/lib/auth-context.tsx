@@ -3,7 +3,6 @@ import { UserRole } from "./mock-data";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AuthUser,
-  loginWithMockRole as adapterMockLogin,
   loginAsOfficer as adapterLoginAs,
 } from "./auth-adapter";
 
@@ -15,8 +14,6 @@ interface AuthContextType {
   realUser: User | null;
   /** True when the current session is impersonating another officer */
   viewingAs: boolean;
-  /** Demo-only role login. Throws in production. */
-  login: (role: UserRole) => void;
   /** Set a CSO-authenticated user from edge-function payload. */
   loginWithCSOData: (userData: { id: string; name: string; email: string; designation: string; role: string }) => void;
   /** Set a fully-formed user (used by Parichay SSO and the adapter). */
@@ -137,7 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         realUser,
         viewingAs: !!realUser,
-        login,
         loginWithCSOData,
         setUserFromAdapter,
         impersonateOfficer,
