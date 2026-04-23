@@ -29,6 +29,7 @@ import IntegrationHealthPage from "./pages/IntegrationHealthPage";
 import GovernanceScorecardPage from "./pages/GovernanceScorecardPage";
 import RecordMinutesPage from "./pages/RecordMinutesPage";
 import DocumentAIPage from "./pages/DocumentAIPage";
+import InsightsPage from "./pages/InsightsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -102,6 +103,14 @@ function AppRoutes() {
       <Route
         path="/settings"
         element={<RoleProtectedRoute roles={["system_admin"]}><SettingsPage /></RoleProtectedRoute>}
+      />
+      <Route
+        path="/insights"
+        element={
+          <RoleProtectedRoute roles={["chief_secretary", "cmo", "system_admin", "divisional_commissioner"]}>
+            <InsightsPage />
+          </RoleProtectedRoute>
+        }
       />
 
       <Route path="*" element={<NotFound />} />

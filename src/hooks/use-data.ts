@@ -159,6 +159,64 @@ export function useGuardianSecretaries() {
   });
 }
 
+// Officers
+export function useOfficers() {
+  return useQuery({
+    queryKey: ["officers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("officers")
+        .select(`*, districts(id, name), departments(id, name, short_name)`)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCreateOfficer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      name: string;
+      designation?: string;
+      email?: string;
+      role: string;
+      district_id?: string | null;
+      department_id?: string | null;
+      is_active?: boolean;
+    }) => {
+      const { data, error } = await supabase.from("officers").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["officers"] }),
+  });
+}
+
+export function useUpdateOfficer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; [k: string]: any }) => {
+      const { id, ...rest } = input;
+      const { error } = await supabase.from("officers").update(rest).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["officers"] }),
+  });
+}
+
+export function useDeleteOfficer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("officers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["officers"] }),
+  });
+}
+
 // Create Project
 export function useCreateProject() {
   const qc = useQueryClient();
@@ -172,6 +230,7 @@ export function useCreateProject() {
       is_goi_pending: boolean;
       is_critical: boolean;
       target_date?: string;
+      assigned_officer_id?: string | null;
       district_ids: string[];
       department_ids: string[];
       tag_ids?: string[];
@@ -227,6 +286,7 @@ export function useUpdateProject() {
       is_goi_pending?: boolean;
       is_critical?: boolean;
       target_date?: string;
+      assigned_officer_id?: string | null;
       district_ids?: string[];
       department_ids?: string[];
       tag_ids?: string[];
@@ -286,6 +346,7 @@ export function useCreateTask() {
       target_date?: string;
       is_goi_pending: boolean;
       is_critical: boolean;
+      assigned_officer_id?: string | null;
       district_ids: string[];
       department_ids: string[];
     }) => {
@@ -331,6 +392,7 @@ export function useUpdateTask() {
       is_goi_pending?: boolean;
       is_critical?: boolean;
       project_id?: string;
+      assigned_officer_id?: string | null;
       district_ids?: string[];
       department_ids?: string[];
     }) => {
