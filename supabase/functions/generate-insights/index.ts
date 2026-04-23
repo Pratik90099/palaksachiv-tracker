@@ -5,20 +5,73 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function jsonResponse(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+    // --- AuthN: require a valid bearer token ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    const token = authHeader.replace("Bearer ", "");
+
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    // --- AuthZ: caller must be a CSO admin or senior officer ---
+    // Identity comes from a custom header set by the app (since CSO sessions are
+    // app-level, not auth.users-level). The header value is cross-checked against
+    // the officers table using the service role.
+    const callerEmail = (req.headers.get("x-cso-email") || "").toLowerCase().trim();
+    if (!callerEmail) {
+      return jsonResponse({ error: "Forbidden: caller identity missing" }, 403);
+    }
+
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    const { data: officer, error: officerError } = await admin
+      .from("officers")
+      .select("id, role, is_cso_admin, is_active")
+      .ilike("email", callerEmail)
+      .maybeSingle();
+
+    if (officerError) {
+      console.error("officer lookup error:", officerError);
+      return jsonResponse({ error: "Authorization check failed" }, 500);
+    }
+
+    const allowedRoles = new Set(["chief_secretary", "system_admin"]);
+    const isAuthorized =
+      !!officer &&
+      officer.is_active &&
+      (officer.is_cso_admin || allowedRoles.has(officer.role));
+
+    if (!isAuthorized) {
+      console.warn(`[generate-insights] forbidden caller=${callerEmail}`);
+      return jsonResponse({ error: "Forbidden: CSO admin role required" }, 403);
+    }
 
     // Aggregate non-PII stats
-    const { data: tasks } = await supabase.from("tasks").select("status, priority, is_critical, is_goi_pending, target_date");
-    const { data: projects } = await supabase.from("projects").select("status, is_critical, is_goi_pending");
+    const { data: tasks } = await admin.from("tasks").select("status, priority, is_critical, is_goi_pending, target_date");
+    const { data: projects } = await admin.from("projects").select("status, is_critical, is_goi_pending");
     const today = new Date().toISOString().slice(0, 10);
 
     const stats = {
@@ -66,12 +119,12 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (aiRes.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Please top up." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (aiRes.status === 429) return jsonResponse({ error: "Rate limit exceeded. Try again shortly." }, 429);
+    if (aiRes.status === 402) return jsonResponse({ error: "AI credits exhausted. Please top up." }, 402);
     if (!aiRes.ok) {
       const t = await aiRes.text();
       console.error("AI gateway error", aiRes.status, t);
-      return new Response(JSON.stringify({ error: "AI service unavailable" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return jsonResponse({ error: "AI service unavailable" }, 500);
     }
 
     const aiJson = await aiRes.json();
@@ -80,17 +133,14 @@ Deno.serve(async (req) => {
     const payload = JSON.parse(toolCall.function.arguments);
 
     // Persist
-    await supabase.from("ai_insights").insert({ payload, generated_by: "cs_office" });
+    await admin.from("ai_insights").insert({ payload, generated_by: callerEmail });
 
     return new Response(JSON.stringify({ payload, stats }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-insights error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }
 });
 
