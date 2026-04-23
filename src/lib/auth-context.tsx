@@ -88,9 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [realUser]);
 
-  const login = (role: UserRole) => {
-    setUser(adapterMockLogin(role));
-  };
 
   const loginWithCSOData = (userData: { id: string; name: string; email: string; designation: string; role: string }) => {
     setUser({
