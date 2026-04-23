@@ -100,7 +100,7 @@ export default function InsightsPage() {
               <p className="text-xs text-muted-foreground">
                 {format(new Date(latest!.generated_at), "dd MMMM yyyy 'at' HH:mm")}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-2">Powered by Lovable AI · gemini-2.5-flash</p>
+              <p className="text-[10px] text-muted-foreground mt-2">Powered by Lovable AI · Gemini 3 Flash</p>
             </div>
           </div>
         </>
