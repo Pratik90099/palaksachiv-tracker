@@ -1,5 +1,6 @@
 import { useAuth } from "@/lib/auth-context";
 import { DIVISIONS } from "@/lib/mock-data";
+import { useOfficers } from "@/hooks/use-data";
 
 /**
  * Returns filter functions based on the logged-in user's role.
@@ -7,24 +8,35 @@ import { DIVISIONS } from "@/lib/mock-data";
  * - Guardian Secretary / District Collector: filter by district name
  * - Divisional Commissioner: filter by division (multiple districts)
  * - Chief Secretary / CMO / Admin: see everything
+ *
+ * Additionally, items with `assigned_officer_id` matching the logged-in user
+ * (matched by email against the officers directory) are always included.
  */
 export function useRoleFilter() {
   const { user } = useAuth();
+  const { data: officers } = useOfficers();
 
   const role = user?.role;
   const userDept = user?.department;
   const userDistrict = user?.district;
   const userDivision = user?.division;
 
-  // Get districts in this user's division
+  // Find the officer record matching the logged-in user (by email)
+  const currentOfficerId = user?.email
+    ? (officers || []).find((o: any) => (o.email || "").toLowerCase() === user.email.toLowerCase())?.id
+    : undefined;
+
   const divisionDistricts: string[] = userDivision
     ? (DIVISIONS as Record<string, string[]>)[userDivision] || []
     : [];
 
-  /** Filter tasks by role */
+  const isAssignedToMe = (item: any) =>
+    currentOfficerId && item.assigned_officer_id === currentOfficerId;
+
   function filterTasks<T extends Record<string, any>>(tasks: T[]): T[] {
     return tasks.filter((t) => {
-      // Dept Secretary → by department
+      if (isAssignedToMe(t)) return true;
+
       if (role === "department_secretary" && userDept) {
         const deptNames = t.task_departments?.map((td: any) => td.departments?.name).filter(Boolean) || [];
         const matchDept = deptNames.some((d: string) =>
@@ -36,13 +48,11 @@ export function useRoleFilter() {
         return matchDept || matchAgency;
       }
 
-      // GS or DC → by district
       if ((role === "guardian_secretary" || role === "district_collector") && userDistrict) {
         const districtNames = t.task_districts?.map((td: any) => td.districts?.name).filter(Boolean) || [];
         return districtNames.some((d: string) => d === userDistrict);
       }
 
-      // DivCom → by division's districts
       if (role === "divisional_commissioner" && divisionDistricts.length > 0) {
         const districtNames = t.task_districts?.map((td: any) => td.districts?.name).filter(Boolean) || [];
         return districtNames.some((d: string) => divisionDistricts.includes(d));
@@ -52,9 +62,10 @@ export function useRoleFilter() {
     });
   }
 
-  /** Filter projects by role */
   function filterProjects<T extends Record<string, any>>(projects: T[]): T[] {
     return projects.filter((p) => {
+      if (isAssignedToMe(p)) return true;
+
       if (role === "department_secretary" && userDept) {
         const deptNames = p.project_departments?.map((pd: any) => pd.departments?.name).filter(Boolean) || [];
         return deptNames.some((d: string) =>
@@ -76,7 +87,6 @@ export function useRoleFilter() {
     });
   }
 
-  /** Filter visits by role */
   function filterVisits<T extends Record<string, any>>(visits: T[]): T[] {
     return visits.filter((v) => {
       if ((role === "guardian_secretary" || role === "district_collector") && userDistrict) {
@@ -85,10 +95,19 @@ export function useRoleFilter() {
       if (role === "divisional_commissioner" && divisionDistricts.length > 0) {
         return divisionDistricts.includes(v.districts?.name);
       }
-      // Dept sec doesn't filter visits (not district-specific)
       return true;
     });
   }
 
-  return { filterTasks, filterProjects, filterVisits, role, userDept, userDistrict, userDivision, divisionDistricts };
+  return {
+    filterTasks,
+    filterProjects,
+    filterVisits,
+    role,
+    userDept,
+    userDistrict,
+    userDivision,
+    divisionDistricts,
+    currentOfficerId,
+  };
 }

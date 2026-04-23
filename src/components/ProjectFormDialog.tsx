@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useDistricts, useDepartments, useCreateProject, useUpdateProject, useProjectCategories, useCreateProjectCategory, useProjectTags, useCreateProjectTag } from "@/hooks/use-data";
+import { useDistricts, useDepartments, useCreateProject, useUpdateProject, useProjectCategories, useCreateProjectCategory, useProjectTags, useCreateProjectTag, useOfficers } from "@/hooks/use-data";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/lib/mock-data";
 import { toast } from "sonner";
 import { Plus, Tag } from "lucide-react";
@@ -20,6 +20,7 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
   const { data: departments } = useDepartments();
   const { data: categories } = useProjectCategories();
   const { data: tags } = useProjectTags();
+  const { data: officers } = useOfficers();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const createCategory = useCreateProjectCategory();
@@ -34,6 +35,7 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
     is_goi_pending: false,
     is_critical: false,
     target_date: "",
+    assigned_officer_id: "",
     district_ids: [] as string[],
     department_ids: [] as string[],
     tag_ids: [] as string[],
@@ -55,6 +57,7 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
         is_goi_pending: editProject.is_goi_pending || false,
         is_critical: editProject.is_critical || false,
         target_date: editProject.target_date || "",
+        assigned_officer_id: editProject.assigned_officer_id || "",
         district_ids: editProject.project_districts?.map((pd: any) => pd.district_id) || [],
         department_ids: editProject.project_departments?.map((pd: any) => pd.department_id) || [],
         tag_ids: editProject.project_tag_assignments?.map((pt: any) => pt.tag_id) || [],
@@ -63,7 +66,7 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
       setForm({
         title: "", description: "", category: "Other", priority: "medium",
         status: "not_started", is_goi_pending: false, is_critical: false,
-        target_date: "", district_ids: [], department_ids: [], tag_ids: [],
+        target_date: "", assigned_officer_id: "", district_ids: [], department_ids: [], tag_ids: [],
       });
     }
   }, [editProject, open]);
@@ -116,11 +119,12 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
     }
 
     try {
+      const payload = { ...form, assigned_officer_id: form.assigned_officer_id || null };
       if (editProject) {
-        await updateProject.mutateAsync({ id: editProject.id, ...form });
+        await updateProject.mutateAsync({ id: editProject.id, ...payload });
         toast.success("Project updated");
       } else {
-        await createProject.mutateAsync(form);
+        await createProject.mutateAsync(payload);
         toast.success("Project created");
       }
       onOpenChange(false);
@@ -206,6 +210,21 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
               <Checkbox checked={form.is_critical} onCheckedChange={(v) => setForm({ ...form, is_critical: !!v })} />
               Critical Issue
             </label>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Assign to Officer (optional)</label>
+            <Select value={form.assigned_officer_id || "none"} onValueChange={(v) => setForm({ ...form, assigned_officer_id: v === "none" ? "" : v })}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="No officer assigned" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— No officer assigned —</SelectItem>
+                {officers?.filter((o: any) => o.is_active).map((o: any) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}{o.designation ? ` — ${o.designation}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Tags multi-select */}

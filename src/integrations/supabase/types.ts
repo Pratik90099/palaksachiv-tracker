@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights: {
+        Row: {
+          generated_at: string
+          generated_by: string | null
+          id: string
+          payload: Json
+        }
+        Insert: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          payload: Json
+        }
+        Update: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string
@@ -234,6 +255,60 @@ export type Database = {
           },
         ]
       }
+      officers: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          designation: string | null
+          district_id: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          designation?: string | null
+          district_id?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
+          designation?: string | null
+          district_id?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "officers_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "officers_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_categories: {
         Row: {
           color: string | null
@@ -377,6 +452,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          assigned_officer_id: string | null
           category: string
           created_at: string
           description: string | null
@@ -391,6 +467,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_officer_id?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -405,6 +482,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_officer_id?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -418,7 +496,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_assigned_officer_id_fkey"
+            columns: ["assigned_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_departments: {
         Row: {
@@ -489,6 +575,7 @@ export type Database = {
       tasks: {
         Row: {
           agency: string | null
+          assigned_officer_id: string | null
           created_at: string
           description: string | null
           display_id: string | null
@@ -505,6 +592,7 @@ export type Database = {
         }
         Insert: {
           agency?: string | null
+          assigned_officer_id?: string | null
           created_at?: string
           description?: string | null
           display_id?: string | null
@@ -521,6 +609,7 @@ export type Database = {
         }
         Update: {
           agency?: string | null
+          assigned_officer_id?: string | null
           created_at?: string
           description?: string | null
           display_id?: string | null
@@ -536,6 +625,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_officer_id_fkey"
+            columns: ["assigned_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
