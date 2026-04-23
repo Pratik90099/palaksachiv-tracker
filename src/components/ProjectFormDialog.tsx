@@ -212,6 +212,21 @@ export function ProjectFormDialog({ open, onOpenChange, editProject }: ProjectFo
             </label>
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Assign to Officer (optional)</label>
+            <Select value={form.assigned_officer_id || "none"} onValueChange={(v) => setForm({ ...form, assigned_officer_id: v === "none" ? "" : v })}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="No officer assigned" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— No officer assigned —</SelectItem>
+                {officers?.filter((o: any) => o.is_active).map((o: any) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}{o.designation ? ` — ${o.designation}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Tags multi-select */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">

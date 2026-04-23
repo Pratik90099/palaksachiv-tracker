@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useDistricts, useDepartments, useProjects, useCreateTask, useUpdateTask } from "@/hooks/use-data";
+import { useDistricts, useDepartments, useProjects, useCreateTask, useUpdateTask, useOfficers } from "@/hooks/use-data";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/lib/mock-data";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ export function TaskFormDialog({ open, onOpenChange, editTask, defaultProjectId 
   const { data: districts } = useDistricts();
   const { data: departments } = useDepartments();
   const { data: projects } = useProjects();
+  const { data: officers } = useOfficers();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
 
@@ -33,6 +34,7 @@ export function TaskFormDialog({ open, onOpenChange, editTask, defaultProjectId 
     target_date: "",
     is_goi_pending: false,
     is_critical: false,
+    assigned_officer_id: "",
     district_ids: [] as string[],
     department_ids: [] as string[],
   });
@@ -50,6 +52,7 @@ export function TaskFormDialog({ open, onOpenChange, editTask, defaultProjectId 
         target_date: editTask.target_date || "",
         is_goi_pending: editTask.is_goi_pending || false,
         is_critical: editTask.is_critical || false,
+        assigned_officer_id: editTask.assigned_officer_id || "",
         district_ids: editTask.task_districts?.map((td: any) => td.district_id) || [],
         department_ids: editTask.task_departments?.map((td: any) => td.department_id) || [],
       });
@@ -58,6 +61,7 @@ export function TaskFormDialog({ open, onOpenChange, editTask, defaultProjectId 
         project_id: defaultProjectId || "", title: "", description: "",
         priority: "medium", status: "not_started", responsible_officer: "",
         agency: "", target_date: "", is_goi_pending: false, is_critical: false,
+        assigned_officer_id: "",
         district_ids: [], department_ids: [],
       });
     }
@@ -77,6 +81,7 @@ export function TaskFormDialog({ open, onOpenChange, editTask, defaultProjectId 
       const payload = {
         ...form,
         project_id: form.project_id || undefined,
+        assigned_officer_id: form.assigned_officer_id || null,
       };
       if (editTask) {
         await updateTask.mutateAsync({ id: editTask.id, ...payload });
@@ -158,6 +163,21 @@ export function TaskFormDialog({ open, onOpenChange, editTask, defaultProjectId 
               <label className="text-xs font-medium text-muted-foreground">Agency</label>
               <Input value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Assign to Officer (optional)</label>
+            <Select value={form.assigned_officer_id || "none"} onValueChange={(v) => setForm({ ...form, assigned_officer_id: v === "none" ? "" : v })}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="No officer assigned" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— No officer assigned —</SelectItem>
+                {officers?.filter((o: any) => o.is_active).map((o: any) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}{o.designation ? ` — ${o.designation}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-6">
