@@ -18,7 +18,10 @@ export function useNotifications() {
     },
   });
 
-  // Subscribe to realtime inserts
+  // Subscribe to realtime inserts.
+  // CONVENTION: Realtime subscriptions MUST use empty deps + removeChannel cleanup
+  // to prevent "cannot add postgres_changes callbacks after subscribe()" errors.
+  // Never include qc or other reactive deps here.
   useEffect(() => {
     const channel = supabase
       .channel("notifications-realtime")
