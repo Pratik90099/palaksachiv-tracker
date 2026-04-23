@@ -18,10 +18,38 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: tasks } = useTasks();
   const { data: visits } = useVisits();
+  const { data: departments } = useDepartments();
   const { filterTasks, filterVisits } = useRoleFilter();
 
   const allTasks = filterTasks(tasks || []);
   const allVisits = filterVisits(visits || []);
+
+  // Live quarterly trends derived from task created_at
+  const quarterlyData = (() => {
+    const buckets: Record<string, { quarter: string; raised: number; resolved: number; overdue: number }> = {};
+    allTasks.forEach((t: any) => {
+      const d = new Date(t.created_at);
+      const q = `Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}`;
+      buckets[q] = buckets[q] || { quarter: q, raised: 0, resolved: 0, overdue: 0 };
+      buckets[q].raised += 1;
+      if (t.status === "closed" || t.status === "completed_pending_closure") buckets[q].resolved += 1;
+      if (t.status === "overdue") buckets[q].overdue += 1;
+    });
+    return Object.values(buckets).sort((a, b) => a.quarter.localeCompare(b.quarter));
+  })();
+
+  // Live department performance
+  const deptPerformance = (departments || []).map((d: any) => {
+    const dTasks = allTasks.filter((t: any) =>
+      (t.task_departments || []).some((td: any) => td.department_id === d.id)
+    );
+    const open = dTasks.filter((t: any) => !["closed", "completed_pending_closure"].includes(t.status)).length;
+    const resolved = dTasks.filter((t: any) => t.status === "closed" || t.status === "completed_pending_closure").length;
+    const overdue = dTasks.filter((t: any) => t.status === "overdue").length;
+    const total = dTasks.length;
+    const score = total === 0 ? 0 : Math.max(0, Math.round((resolved / total) * 100) - overdue * 5);
+    return { department: d.short_name || d.name, open, resolved, overdue, score };
+  }).filter(d => d.open + d.resolved + d.overdue > 0);
 
   const totalActionables = allTasks.length;
   const openItems = allTasks.filter(t => !["closed", "completed_pending_closure"].includes(t.status)).length;
