@@ -3,7 +3,12 @@
 // matching officer via external_identities, and return a session token.
 // Until the government issues the OAuth client credentials, this returns
 // a clear "not yet wired" response.
-import { corsHeaders } from "@supabase/supabase-js/cors";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
