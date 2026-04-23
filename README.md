@@ -36,6 +36,27 @@ npm i
 npm run dev
 ```
 
+## Get complete code (frontend + backend)
+
+This repository already contains both layers:
+
+- **Frontend app**: `src/` (React + Vite TypeScript web UI)
+- **Backend/database layer**: `supabase/` (SQL migrations + edge functions)
+- **Portable full database schema**: `docs/db/full_schema.sql`
+
+To copy or archive the complete project locally:
+
+```sh
+# clone full repo
+git clone <YOUR_GIT_URL>
+cd <YOUR_PROJECT_NAME>
+
+# optional: create a zip with both frontend + backend code
+zip -r palaksachiv-tracker-full.zip src supabase docs/db/full_schema.sql package.json README.md
+```
+
+If you only need backend assets for deployment/migrations, use `supabase/` + `docs/db/full_schema.sql`.
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).
@@ -74,7 +95,14 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 
 ---
 
+
+## Switching AI from Lovable to Gemini/ChatGPT
+
+If you want to remove Lovable AI gateway usage and keep AI features on Gemini or OpenAI, follow **`docs/ai-provider-migration.md`**.
+
 ## Moving to an External PostgreSQL Database
+
+Need a step-by-step runbook? See **`docs/external-database-guide.md`**.
 
 This project ships with a portable, consolidated schema at
 **`docs/db/full_schema.sql`** that replays the entire database structure
@@ -135,4 +163,3 @@ adapter) is already wired and waiting.
 CS Office can pre-map every officer's Parichay UID via **User Management →
 Add / Edit Officer → Parichay UID** today, so the moment SSO is enabled
 those officers will auto-login on their first visit.
-
