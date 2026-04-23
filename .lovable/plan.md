@@ -1,70 +1,47 @@
 
 
-# Plan: Final Mock-Data Cleanup + Working Alert Acknowledge
+# Plan: Remove Demo Mode Entirely
 
-Most of the originally-listed items are already shipped (auth-adapter, Parichay button wired, officer directory with `parichay_uid` / `is_cso_admin` / "Login As", README external-DB guide, `docs/db/full_schema.sql`). The only outstanding work is the four cleanup items.
+Strip all demo-mode scaffolding so the portal only authenticates via real flows (Parichay SSO + CS Office credentials). No more mock role buttons, no `VITE_DEMO_MODE` flag, no `MOCK_USERS` table.
 
----
+## Changes
 
-## 1. GOI Pending — remove fake mock numbers
+### 1. `src/lib/auth-adapter.ts`
+- Delete the `MOCK_USERS` constant and the `loginWithMockRole()` function entirely.
+- Delete the `DEMO_MODE` constant and the `isDemoMode` export.
+- Keep only: `loginWithParichay()`, `loginWithCSO()`, `loginAsOfficer()` (CS Office impersonation).
 
-In `src/pages/GOIPendingPage.tsx`:
+### 2. `src/lib/auth-context.tsx`
+- Remove any `login(role)` mock-role code path and any reference to `loginWithMockRole` / `isDemoMode`.
+- Auth context exposes only: `loginWithParichay`, `loginWithCSO`, `loginAsOfficer`, `stopImpersonating`, `logout`.
 
-- Delete the hard-coded `MINISTRY_DATA` array.
-- Replace the hard-coded `₹1,670 Cr` "Amount Blocked" stat with the live count of GOI items with no monetary figure (or hide the card until a real `amount` field exists).
-- Replace the hard-coded `8` "Ministries Involved" stat with a derived count from `goiItems` (using their `agency` field) — shows `0` on an empty DB.
-- Replace the Ministry-wise Distribution pie with either:
-  - a live aggregation grouped by `task.agency` (preferred), or
-  - an empty-state card "No GOI items recorded yet" when `goiItems.length === 0`.
+### 3. `src/pages/LoginPage.tsx`
+- Remove the entire "Demo: Sign in as…" role-button section (the 7 mock role cards / role count chips that used `loginWithMockRole`).
+- Keep only two login paths:
+  - **Sign in with Parichay SSO** (primary, calls `loginWithParichay()`)
+  - **CS Office sign in** (email + password form, calls `loginWithCSO()`)
+- Remove the live role-count fetch from `officers` if it was only used to label demo buttons; keep it only if shown elsewhere on the page.
 
-Result: empty DB → all zeros and an empty-state, not fake numbers.
+### 4. `.env` / docs
+- Remove any `VITE_DEMO_MODE` references from `README.md` (external-DB migration guide) so operators don't think they need to set it.
 
-## 2. Alerts page — wire to real notifications + working acknowledge
-
-Rewrite `src/pages/AlertsPage.tsx` to:
-
-- Delete the entire `MOCK_ALERTS` array.
-- Read live data from `useNotifications()` (already exists, already realtime-subscribed).
-- Map `notification.type` → severity level (`error` → `critical`, `warning` → `warning`, `info` → `info`, etc.), with sensible defaults.
-- Treat `is_read === false` as "unacknowledged".
-- Wire the **Acknowledge** button to call `markAsRead(notification.id)` (already exposed by the hook).
-- Wire the **Mark All Read** button to call `markAllAsRead()`.
-- Show empty-state "No alerts at this time" when the list is empty.
-
-Result: alerts now reflect real notifications, the Acknowledge button works, and the unread badge in the header (which already uses `useNotifications`) stays in sync.
-
-## 3. State Governance Scorecard — no more fake fallback scores
-
-In `src/pages/GovernanceScorecardPage.tsx`, the live aggregation is already in place, but each metric falls back to `50`/`70` when there's no data — which renders as fake-looking scores on an empty DB. Fix:
-
-- When a district has zero projects/tasks/visits, return `null` for that sub-score (not `50`/`70`).
-- Compute the composite only over non-null sub-scores; if **all** sub-scores are null, mark the district as "No data" and skip ranking.
-- Render `—` for null sub-scores in the table and show a "No data — awaiting first project / visit / actionable" badge for those districts.
-- Empty-state message above the table when **every** district is "No data": "Scorecard activates once tasks and visits are recorded."
-- Top 15 chart only renders districts with a real composite score.
-
-Result: scorecard honestly shows "no data" on a fresh deployment instead of a sea of 50/70 placeholder scores.
-
-## 4. Confirm no other transactional mocks remain
-
-Spot-check after edits: search `src/pages` for any remaining hard-coded arrays (e.g., `MINISTRY_DATA`, `MOCK_*`, hard-coded "Cr" amounts). Remove anything that doesn't trace back to a database query or an enum/config in `src/lib/mock-data.ts`.
-
----
+### 5. Sweep
+- Search the repo for `VITE_DEMO_MODE`, `loginWithMockRole`, `MOCK_USERS`, `isDemoMode`, `demo` (case-insensitive in auth/login files) and remove every remaining hit.
+- Confirm `tsc` is clean.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/pages/GOIPendingPage.tsx` | Remove `MINISTRY_DATA`, hard-coded ₹/ministries; live aggregation + empty state |
-| `src/pages/AlertsPage.tsx` | Replace `MOCK_ALERTS` with `useNotifications`; wire Acknowledge / Mark All Read |
-| `src/pages/GovernanceScorecardPage.tsx` | Drop `50`/`70` fallbacks; render "No data" when district has no records |
-
----
+| `src/lib/auth-adapter.ts` | Delete `MOCK_USERS`, `loginWithMockRole`, `isDemoMode`, `DEMO_MODE` |
+| `src/lib/auth-context.tsx` | Drop mock-role login path |
+| `src/pages/LoginPage.tsx` | Remove demo role buttons; keep Parichay + CS Office only |
+| `README.md` | Strip `VITE_DEMO_MODE` mentions |
 
 ## What this delivers
 
-- Empty database → empty-state UI everywhere; no remaining "demo" numbers.
-- The Acknowledge button on alerts actually marks notifications read (and the header bell badge updates in real time).
-- Governance Scorecard honestly reflects real activity instead of inventing a baseline.
-- Combined with the already-shipped auth-adapter, Parichay-wired login, officer directory with `parichay_uid` + "Login As", and the `docs/db/full_schema.sql` migration script, the portal is now ready for the external-Postgres cutover and the e-Parichay rollout.
+- Login page shows only the two real auth paths: Parichay SSO and CS Office credentials.
+- No code path remains that can mint a session from a hard-coded officer.
+- Production build and demo build are now identical — one less env var, one less surface area.
+- Until Parichay credentials arrive, only CS Office users can sign in (the SSO button surfaces the 501 stub message), which matches the production rollout intent.
 
