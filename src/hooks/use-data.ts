@@ -201,7 +201,7 @@ export function useUpdateOfficer() {
   return useMutation({
     mutationFn: async (input: { id: string; [k: string]: any }) => {
       const { id, ...rest } = input;
-      const { error } = await supabase.from("officers").update(rest).eq("id", id);
+      const { error } = await supabase.from("officers").update(rest as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["officers"] }),
