@@ -77,14 +77,14 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 ## Moving to an External PostgreSQL Database
 
 This project ships with a portable, consolidated schema at
-**`supabase/migrations/_full_schema.sql`** that replays the entire database
-structure (tables, RLS policies, helper functions, indexes) on any vanilla
+**`docs/db/full_schema.sql`** that replays the entire database structure
+(tables, RLS policies, helper functions, indexes) on any vanilla
 PostgreSQL 14+ instance — RDS, Cloud SQL, Azure Database, or on-prem.
 
 ### 1. Replay the schema
 
 ```bash
-psql "$EXTERNAL_DATABASE_URL" -f supabase/migrations/_full_schema.sql
+psql "$EXTERNAL_DATABASE_URL" -f docs/db/full_schema.sql
 ```
 
 The script uses only the `pgcrypto` extension. RLS policies follow the
