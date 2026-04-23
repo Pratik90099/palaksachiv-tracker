@@ -10,13 +10,26 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = [
-  "text/plain",
-  "text/csv",
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+const ALLOWED_TYPES = ["text/plain", "text/csv"];
+const ALLOWED_EXTENSIONS = [".txt", ".csv"];
+
+// Categories accepted by the projects table — keep in sync with ProjectFormDialog
+const VALID_CATEGORIES = [
+  "Infrastructure", "Urban", "Land Acquisition", "Scheme Implementation",
+  "Pragati", "GOI Pending", "Public Health", "Gender Budgeting",
+  "Best Practice", "Admin Coordination", "CM Critical", "Other",
 ];
-const ALLOWED_EXTENSIONS = [".txt", ".csv", ".pdf", ".docx"];
+const VALID_PRIORITIES = ["critical", "high", "medium", "low"];
+const VALID_STATUSES = [
+  "not_started", "in_progress", "on_track", "at_risk",
+  "overdue", "partially_completed", "completed_pending_closure",
+  "closed", "escalated",
+];
+
+function sanitizeEnum(value: string | undefined, allowed: string[], fallback: string): string {
+  if (value && allowed.includes(value)) return value;
+  return fallback;
+}
 
 type ProcessingMode = "summarize" | "extract-projects" | "extract-tasks" | "extract-action-items";
 
@@ -159,17 +172,17 @@ export default function DocumentAIPage() {
       await createProject.mutateAsync({
         title: (project.title || "").substring(0, 255),
         description: (project.description || "").substring(0, 5000),
-        category: project.category || "Other",
-        priority: project.priority || "medium",
-        status: project.status || "not_started",
-        is_goi_pending: project.is_goi_pending || false,
-        is_critical: project.is_critical || false,
+        category: sanitizeEnum(project.category, VALID_CATEGORIES, "Other"),
+        priority: sanitizeEnum(project.priority, VALID_PRIORITIES, "medium"),
+        status: sanitizeEnum(project.status, VALID_STATUSES, "not_started"),
+        is_goi_pending: !!project.is_goi_pending,
+        is_critical: !!project.is_critical,
         target_date: project.target_date || undefined,
         district_ids: [],
         department_ids: [],
       });
       setImportedItems(prev => new Set(prev).add(index));
-      toast.success(`Project "${escapeHtml(project.title)}" imported`);
+      toast.success(`Project "${project.title}" imported`);
     } catch {
       toast.error("Failed to import project");
     }
@@ -181,7 +194,7 @@ export default function DocumentAIPage() {
       await createTask.mutateAsync({
         title: (task.title || "").substring(0, 255),
         description: (task.description || "").substring(0, 5000),
-        priority: task.priority || "medium",
+        priority: sanitizeEnum(task.priority, VALID_PRIORITIES, "medium"),
         status: "not_started",
         responsible_officer: (task.responsible_officer || task.responsible || "").substring(0, 255),
         agency: (task.agency || "").substring(0, 255),
@@ -192,7 +205,7 @@ export default function DocumentAIPage() {
         department_ids: [],
       });
       setImportedItems(prev => new Set(prev).add(1000 + index));
-      toast.success(`Task "${escapeHtml(task.title)}" imported`);
+      toast.success(`Task "${task.title}" imported`);
     } catch {
       toast.error("Failed to import task");
     }
@@ -224,12 +237,15 @@ export default function DocumentAIPage() {
             <p className="text-[10px] text-muted-foreground mt-1">
               {file
                 ? `${(file.size / 1024).toFixed(1)} KB • ${file.type || "unknown"}`
-                : "PDF, DOCX, CSV, TXT — Max 5MB"}
+                : "TXT or CSV — Max 5MB"}
+            </p>
+            <p className="text-[10px] text-muted-foreground/70 mt-1">
+              Tip: Convert PDFs/DOCX to text before upload.
             </p>
             <input
               id="file-input"
               type="file"
-              accept=".pdf,.docx,.csv,.txt"
+              accept=".txt,.csv,text/plain,text/csv"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
