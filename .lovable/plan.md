@@ -1,99 +1,70 @@
 
 
-# Plan: Resolve All Security Findings
+# Plan: Decouple AI Layer from Lovable API Gateway — Direct Gemini Only
 
-The portal uses anonymous Supabase sessions (no per-user `auth.users`) — all login is app-level via `authenticate-cso` and the planned Parichay edge function. Fixes below close the seven open findings without breaking that model.
+Currently both AI edge functions call `https://ai.gateway.lovable.dev/v1/chat/completions` using `LOVABLE_API_KEY`. This plan replaces that with **direct calls to the Google Gemini API** using a user-supplied `GEMINI_API_KEY`. No Lovable AI Gateway calls remain anywhere in the codebase.
 
-## 1. `external_identities` — remove anon read access (migration)
+## 1. New secret required
 
-Drop the public SELECT policy and restrict reads to authenticated only. Since the app reads identities only inside the `parichay-callback` and `authenticate-cso` edge functions (which use the service role and bypass RLS), removing anon read has zero UI impact.
+Add a new edge-function secret:
+- **`GEMINI_API_KEY`** — obtained from Google AI Studio (https://aistudio.google.com/apikey).
 
-```sql
-DROP POLICY "Public can read external_identities" ON public.external_identities;
-CREATE POLICY "Authenticated can read external_identities"
-  ON public.external_identities FOR SELECT
-  TO authenticated USING (true);
-```
+The implementation will request this via the secrets tool before deploying. `LOVABLE_API_KEY` is no longer read by either function (the platform may still keep it set, but our code will not reference it).
 
-## 2. `notifications` — restrict reads + add Realtime channel policy (migration)
+## 2. `supabase/functions/generate-insights/index.ts`
 
-Drop the `Allow all access` (anon+auth, true) policy. Add:
-- SELECT to `authenticated` only (no `anon`).
-- INSERT/UPDATE/DELETE to `authenticated` only.
-- An RLS policy on `realtime.messages` so only authenticated subscribers receive notification stream events.
+Replace the OpenAI-style chat-completions call with a direct Gemini `generateContent` call.
 
-```sql
-DROP POLICY "Allow all access" ON public.notifications;
-DROP POLICY "Public can read notifications" ON public.notifications;
+- **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+- **Request body:** Gemini-native shape using `contents` + `systemInstruction` + `tools[].functionDeclarations` for structured output (the existing `submit_insights` schema maps directly to a Gemini function declaration).
+- **Tool-forced output:** set `toolConfig.functionCallingConfig.mode = "ANY"` with `allowedFunctionNames: ["submit_insights"]` so Gemini must call the function — preserves today's structured `{ headline, key_insights, risks, recommendations }` contract.
+- **Response parsing:** read the function call from `candidates[0].content.parts[].functionCall.args` instead of `choices[0].message.tool_calls[0].function.arguments`.
+- **Error handling:** map Gemini's 429 → "Rate limit exceeded" and 403/401 → "AI key invalid"; remove the Lovable-specific 402 "credits exhausted" branch (Gemini billing is handled in Google Cloud).
+- All existing auth/role checks (JWT, `x-cso-email`, `is_cso_admin` gate, rate limit) stay exactly as they are.
 
-CREATE POLICY "Authenticated can read notifications"
-  ON public.notifications FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated can write notifications"
-  ON public.notifications FOR ALL TO authenticated USING (true) WITH CHECK (true);
+## 3. `supabase/functions/process-document/index.ts`
 
-CREATE POLICY "Authenticated realtime notifications"
-  ON realtime.messages FOR SELECT TO authenticated USING (true);
-```
+Same swap, simpler shape (no tool calling — JSON-mode output).
 
-The app already calls `supabase.auth.signInAnonymously()` on mount (see `auth-context.tsx`), so every browser session is "authenticated" from RLS's perspective — no UI break. Anonymous-from-the-internet readers are blocked.
+- **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+- **Request body:** `contents: [{ role: "user", parts: [{ text: userPrompt }] }]`, `systemInstruction: { parts: [{ text: SYSTEM_PROMPTS[mode] }] }`, and `generationConfig: { responseMimeType: "application/json" }` so Gemini returns valid JSON directly (eliminates the markdown-fence stripping hack, though we'll keep the fallback parser as a safety net).
+- **Response parsing:** read text from `candidates[0].content.parts[0].text`, then `JSON.parse`.
+- All input validation (`MAX_CONTENT_LENGTH`, mode whitelist, filename trimming), the `validateAiResult` shape checker, and CORS headers stay unchanged.
 
-## 3. Storage `documents` bucket — drop legacy public-role policies (migration)
+## 4. UI label
 
-Migration `…103709…` already added `authenticated`-scoped policies but the original `public`-role policies from `…060845…` were never dropped. Add explicit drops:
+`src/pages/InsightsPage.tsx` footer already reads "Powered by Gemini 3 Flash". Update to **"Powered by Google Gemini"** so it accurately reflects "direct Gemini, not via Lovable AI" — and avoids tying the label to a specific model version we may swap.
 
-```sql
-DROP POLICY "Allow document uploads" ON storage.objects;
-DROP POLICY "Allow document reads"   ON storage.objects;
-```
+## 5. Documentation / memory
 
-The `authenticated`-only policies remain, matching the bucket's `private` flag.
+Update `mem://features/ai-document-processing` (and add a new `mem://architecture/ai-provider` note) to record: AI calls go **directly to Google Gemini API**; `GEMINI_API_KEY` is the only credential; no Lovable AI Gateway dependency.
 
-## 4. `generate-insights` edge function — require auth + CSO admin role
+## 6. Verification after deploy
 
-Currently any anonymous caller can spend AI credits. Add at the top of the handler:
-
-- Read `Authorization: Bearer <jwt>` header; return 401 if missing.
-- Verify the JWT with `supabase.auth.getClaims(token)`; return 401 on failure.
-- Look up the caller in `officers` by email and require `is_cso_admin = true` OR role in (`chief_secretary`, `system_admin`); return 403 otherwise.
-- Add a simple in-memory per-IP rate limit (mirrors `authenticate-cso`): max 10 generations per 15 min.
-
-The frontend already uses `supabase.functions.invoke` which forwards the anon-session JWT, so the call continues to work for signed-in CSO users.
-
-## 5. `authenticate-cso` — remove hardcoded plaintext credentials
-
-- Delete the `DEFAULT_USERS` array entirely.
-- If `CSO_USERS_JSON` is unset, return a clear 503 config error instead of falling back.
-- Update `loadUsers()` accordingly; no behavioural change when the secret is properly set.
-- Add a one-line note in the response explaining how to configure the secret.
-
-After deploy I'll instruct the user (in the implementation message, not here) to:
-1. Rotate the now-public `cso@2026` password.
-2. Set `CSO_USERS_JSON` with bcrypt-hashed passwords (we'll add bcrypt verification too: import `https://deno.land/x/bcrypt@v0.4.1/mod.ts` and switch `timingSafeEqual` on the password to `bcrypt.compare`). Email comparison stays constant-time.
-3. Treat the two leaked emails as compromised for this service.
-
-## 6. Mark findings resolved
-
-After the migrations and edge-function deploys land, call `security--manage_security_finding` with `mark_as_fixed` for all seven findings, with explanations referencing each change.
+- Call **Generate Insights** once as a CSO admin → confirm structured payload appears and is persisted to `ai_insights`.
+- Upload one document via Document AI in `summarize` mode → confirm summary returns.
+- Check edge function logs to confirm outbound requests now hit `generativelanguage.googleapis.com` (not `ai.gateway.lovable.dev`).
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `supabase/migrations/<new>.sql` | Items 1, 2, 3 — RLS tightening + storage cleanup + realtime policy |
-| `supabase/functions/generate-insights/index.ts` | Auth + CSO-role gate + rate limit |
-| `supabase/functions/authenticate-cso/index.ts` | Remove `DEFAULT_USERS`; require `CSO_USERS_JSON`; bcrypt password compare |
+| `supabase/functions/generate-insights/index.ts` | Replace Lovable Gateway call with direct Gemini `generateContent` + function-calling for structured insights |
+| `supabase/functions/process-document/index.ts` | Replace Lovable Gateway call with direct Gemini `generateContent` + JSON response mime type |
+| `src/pages/InsightsPage.tsx` | Footer label → "Powered by Google Gemini" |
+| `mem://architecture/ai-provider` (new) | Record direct-Gemini decision and key |
+| `mem://features/ai-document-processing` | Note provider switch |
 
 ## What this delivers
 
-- No anonymous reads of identity data, notifications, or storage objects.
-- Realtime notification stream restricted to authenticated subscribers.
-- AI Insights generator can no longer be triggered or bill credits anonymously — only CSO admins.
-- No real names, emails, or passwords remain in source code; the function fails closed without proper configuration.
-- All seven Security Hub findings move from open → fixed.
+- Zero references to `LOVABLE_API_KEY` or `ai.gateway.lovable.dev` in the AI code paths.
+- All AI traffic flows **directly from the edge function to Google's Gemini API** using your own `GEMINI_API_KEY`.
+- Structured insights and document extraction continue to work with the same response contracts the UI already consumes — no frontend logic changes beyond the footer label.
+- Rate-limit / quota / billing now governed entirely by your Google AI account, not by Lovable credits.
 
-## Operator follow-up (after deploy)
+## Operator follow-up (after approval, before deploy)
 
-- Set `CSO_USERS_JSON` with bcrypt-hashed passwords (format: `[{"id","name","email","password_hash"}]`).
-- Rotate the previously-hardcoded `cso@2026` password.
-- Confirm CSO sign-in still works end-to-end, then verify the Security Hub view is clean.
+1. Generate a Gemini API key at https://aistudio.google.com/apikey.
+2. When prompted, paste it as the `GEMINI_API_KEY` secret.
+3. (Optional) Once verified, the `LOVABLE_API_KEY` secret can be deleted from project settings — no code reads it anymore.
 
