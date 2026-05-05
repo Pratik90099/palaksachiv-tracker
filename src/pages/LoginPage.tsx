@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { csoLogin, csoForgotPassword } from "@/lib/cso-auth-client";
 import { loginWithParichay } from "@/lib/auth-adapter";
 import { toast } from "sonner";
 
@@ -14,6 +14,9 @@ export default function LoginPage() {
   const { loginWithCSOData, setUserFromAdapter } = useAuth();
   const navigate = useNavigate();
   const [showCSOLogin, setShowCSOLogin] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -50,26 +53,32 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("authenticate-cso", {
-        body: { email: email.trim(), password },
-      });
-
-      if (fnError) {
-        setError("Authentication service unavailable. Please try again.");
-        setLoading(false);
-        return;
-      }
-
+      const data = await csoLogin(email.trim(), password);
       if (data?.success && data?.user) {
         loginWithCSOData(data.user);
         navigate("/dashboard");
       } else {
         setError(data?.error || "Invalid email or password");
       }
-    } catch {
-      setError("Authentication failed. Please try again.");
+    } catch (e: any) {
+      setError(e?.message || "Authentication failed. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    try {
+      await csoForgotPassword(forgotEmail.trim());
+      toast.success("If that email exists, a reset link has been sent.");
+      setShowForgot(false);
+      setForgotEmail("");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not contact the auth server.");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
