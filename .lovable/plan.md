@@ -1,70 +1,131 @@
+# Plan: Self-Hosted CSO Auth Server (Node/Express + SMTP Reset)
 
+Replace the Supabase `authenticate-cso` edge function with a small Node/Express server you upload to your own host. The frontend talks to it directly. Passwords are stored as bcrypt hashes in `users.json` next to the server file. Password reset is via emailed one-time link.
 
-# Plan: Decouple AI Layer from Lovable API Gateway — Direct Gemini Only
+## What you upload to your server
 
-Currently both AI edge functions call `https://ai.gateway.lovable.dev/v1/chat/completions` using `LOVABLE_API_KEY`. This plan replaces that with **direct calls to the Google Gemini API** using a user-supplied `GEMINI_API_KEY`. No Lovable AI Gateway calls remain anywhere in the codebase.
+A single self-contained folder `cso-auth-server/` with:
 
-## 1. New secret required
+```
+cso-auth-server/
+├── server.js          # Express app (login, forgot, reset, admin reset)
+├── users.json         # Bcrypt-hashed admin accounts (pre-seeded)
+├── reset-tokens.json  # Auto-managed; do not edit
+├── .env.example       # Template for SMTP + APP config
+├── package.json
+└── README.md          # Deploy + ops instructions
+```
 
-Add a new edge-function secret:
-- **`GEMINI_API_KEY`** — obtained from Google AI Studio (https://aistudio.google.com/apikey).
+Run with: `npm install && node server.js` (or PM2/systemd). Listens on `PORT` (default 8787).
 
-The implementation will request this via the secrets tool before deploying. `LOVABLE_API_KEY` is no longer read by either function (the platform may still keep it set, but our code will not reference it).
+## Endpoints
 
-## 2. `supabase/functions/generate-insights/index.ts`
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/cso/login` | Email + password → `{ success, user }` |
+| `POST` | `/api/cso/forgot-password` | Email → sends reset link (always returns 200, no enumeration) |
+| `POST` | `/api/cso/reset-password` | Token + new password → updates `users.json` |
+| `GET`  | `/api/cso/health` | Liveness probe |
 
-Replace the OpenAI-style chat-completions call with a direct Gemini `generateContent` call.
+CORS allow-list driven by `ALLOWED_ORIGINS` env var (comma-separated). Rate limiting: 5 login attempts / 15 min / IP, 3 forgot-password / hour / email. Tokens are 32-byte hex, single-use, 60-min TTL, stored hashed in `reset-tokens.json`.
 
-- **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
-- **Request body:** Gemini-native shape using `contents` + `systemInstruction` + `tools[].functionDeclarations` for structured output (the existing `submit_insights` schema maps directly to a Gemini function declaration).
-- **Tool-forced output:** set `toolConfig.functionCallingConfig.mode = "ANY"` with `allowedFunctionNames: ["submit_insights"]` so Gemini must call the function — preserves today's structured `{ headline, key_insights, risks, recommendations }` contract.
-- **Response parsing:** read the function call from `candidates[0].content.parts[].functionCall.args` instead of `choices[0].message.tool_calls[0].function.arguments`.
-- **Error handling:** map Gemini's 429 → "Rate limit exceeded" and 403/401 → "AI key invalid"; remove the Lovable-specific 402 "credits exhausted" branch (Gemini billing is handled in Google Cloud).
-- All existing auth/role checks (JWT, `x-cso-email`, `is_cso_admin` gate, rate limit) stay exactly as they are.
+## Pre-seeded admins (in `users.json`)
 
-## 3. `supabase/functions/process-document/index.ts`
+```json
+[
+  { "id": "admin-bavi",  "name": "Bavi Pratik",   "email": "bavipratik@gmail.com",   "password_hash": "<bcrypt>", "role": "system_admin" },
+  { "id": "admin-rishi", "name": "Rishi Shirke",  "email": "rishishirke65@gmail.com","password_hash": "<bcrypt>", "role": "system_admin" }
+]
+```
 
-Same swap, simpler shape (no tool calling — JSON-mode output).
+Initial password for both: **`ChangeMe@2026`** (you will be forced to reset on first login — both via "Forgot password" or by editing `users.json` after generating a new hash with the bundled `node hash.js <password>` helper).
 
-- **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
-- **Request body:** `contents: [{ role: "user", parts: [{ text: userPrompt }] }]`, `systemInstruction: { parts: [{ text: SYSTEM_PROMPTS[mode] }] }`, and `generationConfig: { responseMimeType: "application/json" }` so Gemini returns valid JSON directly (eliminates the markdown-fence stripping hack, though we'll keep the fallback parser as a safety net).
-- **Response parsing:** read text from `candidates[0].content.parts[0].text`, then `JSON.parse`.
-- All input validation (`MAX_CONTENT_LENGTH`, mode whitelist, filename trimming), the `validateAiResult` shape checker, and CORS headers stay unchanged.
+## SMTP config (`.env`)
 
-## 4. UI label
+```
+PORT=8787
+ALLOWED_ORIGINS=https://your-frontend-domain.com
+APP_URL=https://your-frontend-domain.com
+JWT_SECRET=<random-64-char-string>          # generated for you in README
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=youraddress@gmail.com
+SMTP_PASS=<gmail-app-password>              # https://myaccount.google.com/apppasswords
+SMTP_FROM="GS Portal <noreply@yourdomain.com>"
+```
 
-`src/pages/InsightsPage.tsx` footer already reads "Powered by Gemini 3 Flash". Update to **"Powered by Google Gemini"** so it accurately reflects "direct Gemini, not via Lovable AI" — and avoids tying the label to a specific model version we may swap.
+Gmail app-password works out of the box; SendGrid/Mailgun SMTP also drop in.
 
-## 5. Documentation / memory
+## Frontend changes (in this repo)
 
-Update `mem://features/ai-document-processing` (and add a new `mem://architecture/ai-provider` note) to record: AI calls go **directly to Google Gemini API**; `GEMINI_API_KEY` is the only credential; no Lovable AI Gateway dependency.
+1. **`.env`** — add `VITE_CSO_AUTH_URL=https://your-server.com` (you fill in after deploying).
+2. **`src/lib/auth-adapter.ts`** — `loginWithCSO` switches from `supabase.functions.invoke('authenticate-cso', …)` to `fetch(\`${VITE_CSO_AUTH_URL}/api/cso/login\`, …)`. Same return shape, no other call-sites change.
+3. **`src/pages/LoginPage.tsx`** — same swap (it currently invokes the edge function inline). Add a **"Forgot password?"** link below the password field that opens an inline panel:
+   - Step 1: email input → POST `/forgot-password` → toast "If that email exists, a reset link was sent."
+   - Step 2 (separate route): new page **`/reset-password`** reads `?token=…` from URL, shows new-password + confirm fields → POST `/reset-password`. On success, redirects to `/login` with a success toast.
+4. **`src/App.tsx`** — register the new public route `/reset-password`.
+5. **Optional cleanup**: leave `supabase/functions/authenticate-cso/` in the repo (harmless) or delete it — your call. Plan deletes it to avoid confusion.
 
-## 6. Verification after deploy
+## How password reset works end-to-end
 
-- Call **Generate Insights** once as a CSO admin → confirm structured payload appears and is persisted to `ai_insights`.
-- Upload one document via Document AI in `summarize` mode → confirm summary returns.
-- Check edge function logs to confirm outbound requests now hit `generativelanguage.googleapis.com` (not `ai.gateway.lovable.dev`).
+```text
+User clicks "Forgot password" on /login
+        │
+        ▼
+POST /api/cso/forgot-password { email }
+        │
+        ├─ email not in users.json → return 200 silently
+        └─ email exists:
+              ├─ generate 32-byte token
+              ├─ store sha256(token) + expiry in reset-tokens.json
+              └─ SMTP send: "Reset link: {APP_URL}/reset-password?token={token}"
+        ▼
+User clicks link → /reset-password page
+        ▼
+POST /api/cso/reset-password { token, newPassword }
+        ├─ hash token, look up, check not used + not expired
+        ├─ bcrypt-hash newPassword, update users.json
+        ├─ mark token used
+        └─ return 200 → frontend redirects to /login
+```
 
-## Files changed
+## Security notes
 
-| File | Change |
-|---|---|
-| `supabase/functions/generate-insights/index.ts` | Replace Lovable Gateway call with direct Gemini `generateContent` + function-calling for structured insights |
-| `supabase/functions/process-document/index.ts` | Replace Lovable Gateway call with direct Gemini `generateContent` + JSON response mime type |
-| `src/pages/InsightsPage.tsx` | Footer label → "Powered by Google Gemini" |
-| `mem://architecture/ai-provider` (new) | Record direct-Gemini decision and key |
-| `mem://features/ai-document-processing` | Note provider switch |
+- Passwords: bcrypt cost factor 12.
+- Tokens: stored hashed (sha256), single-use, 60-min TTL, cleaned up on each forgot-password call.
+- No user enumeration on `/forgot-password`.
+- Constant-time email compare on `/login`; dummy bcrypt compare on missing user (prevents timing leak).
+- HTTPS required in production — put server behind nginx/Caddy with TLS, OR use Node's `https` module if you have certs locally. README covers both.
+- File writes to `users.json` are atomic (`writeFile` to temp + rename) so a crash mid-reset can't corrupt it.
+- `reset-tokens.json` is auto-pruned of expired entries on every request.
 
-## What this delivers
+## Deploy steps you'll follow (in README)
 
-- Zero references to `LOVABLE_API_KEY` or `ai.gateway.lovable.dev` in the AI code paths.
-- All AI traffic flows **directly from the edge function to Google's Gemini API** using your own `GEMINI_API_KEY`.
-- Structured insights and document extraction continue to work with the same response contracts the UI already consumes — no frontend logic changes beyond the footer label.
-- Rate-limit / quota / billing now governed entirely by your Google AI account, not by Lovable credits.
+1. Copy the `cso-auth-server/` folder to your server (scp/rsync).
+2. `cd cso-auth-server && npm install`
+3. `cp .env.example .env` and fill in SMTP + ALLOWED_ORIGINS + APP_URL.
+4. `node server.js` (or `pm2 start server.js --name cso-auth`).
+5. Put it behind nginx on `https://auth.yourdomain.com` (sample nginx block included).
+6. In your frontend deployment, set `VITE_CSO_AUTH_URL=https://auth.yourdomain.com` and rebuild.
+7. Log in with `bavipratik@gmail.com` / `ChangeMe@2026`, immediately use "Forgot password" to rotate.
 
-## Operator follow-up (after approval, before deploy)
+## Operator helper scripts (bundled)
 
-1. Generate a Gemini API key at https://aistudio.google.com/apikey.
-2. When prompted, paste it as the `GEMINI_API_KEY` secret.
-3. (Optional) Once verified, the `LOVABLE_API_KEY` secret can be deleted from project settings — no code reads it anymore.
+- `node hash.js <plaintext>` → prints bcrypt hash you can paste into `users.json`.
+- `node add-admin.js <email> <name> <plaintext>` → appends a new admin entry safely.
 
+## What I will NOT change
+
+- Parichay SSO flow, role-based data isolation, RLS, AI/Gemini layer, or any other portal feature.
+- Other edge functions (`parichay-callback`, `generate-insights`, `process-document`) stay as-is.
+
+## After approval I will
+
+1. Create the `cso-auth-server/` folder in this repo (so you can download/zip it).
+2. Generate the bcrypt hashes for the seed password and bake them into `users.json`.
+3. Generate a random `JWT_SECRET` and write it into `.env.example` as a working default.
+4. Update `auth-adapter.ts`, `LoginPage.tsx`, add `ResetPasswordPage.tsx`, and register the route.
+5. Update `.env` with a `VITE_CSO_AUTH_URL` placeholder.
+6. Write the README with copy-paste deploy + nginx + PM2 instructions.
+
+Then you download the `cso-auth-server/` folder, upload to your server, fill in `.env`, and run it.

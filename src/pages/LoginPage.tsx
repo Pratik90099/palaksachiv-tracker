@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { csoLogin, csoForgotPassword } from "@/lib/cso-auth-client";
 import { loginWithParichay } from "@/lib/auth-adapter";
 import { toast } from "sonner";
 
@@ -14,6 +14,9 @@ export default function LoginPage() {
   const { loginWithCSOData, setUserFromAdapter } = useAuth();
   const navigate = useNavigate();
   const [showCSOLogin, setShowCSOLogin] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -50,26 +53,32 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("authenticate-cso", {
-        body: { email: email.trim(), password },
-      });
-
-      if (fnError) {
-        setError("Authentication service unavailable. Please try again.");
-        setLoading(false);
-        return;
-      }
-
+      const data = await csoLogin(email.trim(), password);
       if (data?.success && data?.user) {
         loginWithCSOData(data.user);
         navigate("/dashboard");
       } else {
         setError(data?.error || "Invalid email or password");
       }
-    } catch {
-      setError("Authentication failed. Please try again.");
+    } catch (e: any) {
+      setError(e?.message || "Authentication failed. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    try {
+      await csoForgotPassword(forgotEmail.trim());
+      toast.success("If that email exists, a reset link has been sent.");
+      setShowForgot(false);
+      setForgotEmail("");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not contact the auth server.");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -283,6 +292,45 @@ export default function LoginPage() {
                   >
                     {loading ? "Signing in..." : "Sign In to CS Office"}
                   </Button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgot((v) => !v); setForgotEmail(email); }}
+                    className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+
+                  {showForgot && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="space-y-2 p-3 rounded-lg border border-border bg-muted/30"
+                    >
+                      <Label className="text-xs font-medium">Send a reset link to:</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="email"
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                          placeholder="your.email@gmail.com"
+                          maxLength={255}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleForgotPassword}
+                          disabled={forgotLoading || !forgotEmail.trim()}
+                          variant="secondary"
+                        >
+                          {forgotLoading ? "Sending..." : "Send"}
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        We'll email a one-time link valid for 60 minutes.
+                      </p>
+                    </motion.div>
+                  )}
                 </div>
 
                 <div className="mt-6 p-3 rounded-lg bg-muted/50 border border-border">
