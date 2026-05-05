@@ -1,99 +1,131 @@
+# Plan: Self-Hosted CSO Auth Server (Node/Express + SMTP Reset)
 
+Replace the Supabase `authenticate-cso` edge function with a small Node/Express server you upload to your own host. The frontend talks to it directly. Passwords are stored as bcrypt hashes in `users.json` next to the server file. Password reset is via emailed one-time link.
 
-# Plan: Resolve All Security Findings
+## What you upload to your server
 
-The portal uses anonymous Supabase sessions (no per-user `auth.users`) — all login is app-level via `authenticate-cso` and the planned Parichay edge function. Fixes below close the seven open findings without breaking that model.
+A single self-contained folder `cso-auth-server/` with:
 
-## 1. `external_identities` — remove anon read access (migration)
-
-Drop the public SELECT policy and restrict reads to authenticated only. Since the app reads identities only inside the `parichay-callback` and `authenticate-cso` edge functions (which use the service role and bypass RLS), removing anon read has zero UI impact.
-
-```sql
-DROP POLICY "Public can read external_identities" ON public.external_identities;
-CREATE POLICY "Authenticated can read external_identities"
-  ON public.external_identities FOR SELECT
-  TO authenticated USING (true);
+```
+cso-auth-server/
+├── server.js          # Express app (login, forgot, reset, admin reset)
+├── users.json         # Bcrypt-hashed admin accounts (pre-seeded)
+├── reset-tokens.json  # Auto-managed; do not edit
+├── .env.example       # Template for SMTP + APP config
+├── package.json
+└── README.md          # Deploy + ops instructions
 ```
 
-## 2. `notifications` — restrict reads + add Realtime channel policy (migration)
+Run with: `npm install && node server.js` (or PM2/systemd). Listens on `PORT` (default 8787).
 
-Drop the `Allow all access` (anon+auth, true) policy. Add:
-- SELECT to `authenticated` only (no `anon`).
-- INSERT/UPDATE/DELETE to `authenticated` only.
-- An RLS policy on `realtime.messages` so only authenticated subscribers receive notification stream events.
+## Endpoints
 
-```sql
-DROP POLICY "Allow all access" ON public.notifications;
-DROP POLICY "Public can read notifications" ON public.notifications;
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/cso/login` | Email + password → `{ success, user }` |
+| `POST` | `/api/cso/forgot-password` | Email → sends reset link (always returns 200, no enumeration) |
+| `POST` | `/api/cso/reset-password` | Token + new password → updates `users.json` |
+| `GET`  | `/api/cso/health` | Liveness probe |
 
-CREATE POLICY "Authenticated can read notifications"
-  ON public.notifications FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated can write notifications"
-  ON public.notifications FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CORS allow-list driven by `ALLOWED_ORIGINS` env var (comma-separated). Rate limiting: 5 login attempts / 15 min / IP, 3 forgot-password / hour / email. Tokens are 32-byte hex, single-use, 60-min TTL, stored hashed in `reset-tokens.json`.
 
-CREATE POLICY "Authenticated realtime notifications"
-  ON realtime.messages FOR SELECT TO authenticated USING (true);
+## Pre-seeded admins (in `users.json`)
+
+```json
+[
+  { "id": "admin-bavi",  "name": "Bavi Pratik",   "email": "bavipratik@gmail.com",   "password_hash": "<bcrypt>", "role": "system_admin" },
+  { "id": "admin-rishi", "name": "Rishi Shirke",  "email": "rishishirke65@gmail.com","password_hash": "<bcrypt>", "role": "system_admin" }
+]
 ```
 
-The app already calls `supabase.auth.signInAnonymously()` on mount (see `auth-context.tsx`), so every browser session is "authenticated" from RLS's perspective — no UI break. Anonymous-from-the-internet readers are blocked.
+Initial password for both: **`ChangeMe@2026`** (you will be forced to reset on first login — both via "Forgot password" or by editing `users.json` after generating a new hash with the bundled `node hash.js <password>` helper).
 
-## 3. Storage `documents` bucket — drop legacy public-role policies (migration)
+## SMTP config (`.env`)
 
-Migration `…103709…` already added `authenticated`-scoped policies but the original `public`-role policies from `…060845…` were never dropped. Add explicit drops:
-
-```sql
-DROP POLICY "Allow document uploads" ON storage.objects;
-DROP POLICY "Allow document reads"   ON storage.objects;
+```
+PORT=8787
+ALLOWED_ORIGINS=https://your-frontend-domain.com
+APP_URL=https://your-frontend-domain.com
+JWT_SECRET=<random-64-char-string>          # generated for you in README
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=youraddress@gmail.com
+SMTP_PASS=<gmail-app-password>              # https://myaccount.google.com/apppasswords
+SMTP_FROM="GS Portal <noreply@yourdomain.com>"
 ```
 
-The `authenticated`-only policies remain, matching the bucket's `private` flag.
+Gmail app-password works out of the box; SendGrid/Mailgun SMTP also drop in.
 
-## 4. `generate-insights` edge function — require auth + CSO admin role
+## Frontend changes (in this repo)
 
-Currently any anonymous caller can spend AI credits. Add at the top of the handler:
+1. **`.env`** — add `VITE_CSO_AUTH_URL=https://your-server.com` (you fill in after deploying).
+2. **`src/lib/auth-adapter.ts`** — `loginWithCSO` switches from `supabase.functions.invoke('authenticate-cso', …)` to `fetch(\`${VITE_CSO_AUTH_URL}/api/cso/login\`, …)`. Same return shape, no other call-sites change.
+3. **`src/pages/LoginPage.tsx`** — same swap (it currently invokes the edge function inline). Add a **"Forgot password?"** link below the password field that opens an inline panel:
+   - Step 1: email input → POST `/forgot-password` → toast "If that email exists, a reset link was sent."
+   - Step 2 (separate route): new page **`/reset-password`** reads `?token=…` from URL, shows new-password + confirm fields → POST `/reset-password`. On success, redirects to `/login` with a success toast.
+4. **`src/App.tsx`** — register the new public route `/reset-password`.
+5. **Optional cleanup**: leave `supabase/functions/authenticate-cso/` in the repo (harmless) or delete it — your call. Plan deletes it to avoid confusion.
 
-- Read `Authorization: Bearer <jwt>` header; return 401 if missing.
-- Verify the JWT with `supabase.auth.getClaims(token)`; return 401 on failure.
-- Look up the caller in `officers` by email and require `is_cso_admin = true` OR role in (`chief_secretary`, `system_admin`); return 403 otherwise.
-- Add a simple in-memory per-IP rate limit (mirrors `authenticate-cso`): max 10 generations per 15 min.
+## How password reset works end-to-end
 
-The frontend already uses `supabase.functions.invoke` which forwards the anon-session JWT, so the call continues to work for signed-in CSO users.
+```text
+User clicks "Forgot password" on /login
+        │
+        ▼
+POST /api/cso/forgot-password { email }
+        │
+        ├─ email not in users.json → return 200 silently
+        └─ email exists:
+              ├─ generate 32-byte token
+              ├─ store sha256(token) + expiry in reset-tokens.json
+              └─ SMTP send: "Reset link: {APP_URL}/reset-password?token={token}"
+        ▼
+User clicks link → /reset-password page
+        ▼
+POST /api/cso/reset-password { token, newPassword }
+        ├─ hash token, look up, check not used + not expired
+        ├─ bcrypt-hash newPassword, update users.json
+        ├─ mark token used
+        └─ return 200 → frontend redirects to /login
+```
 
-## 5. `authenticate-cso` — remove hardcoded plaintext credentials
+## Security notes
 
-- Delete the `DEFAULT_USERS` array entirely.
-- If `CSO_USERS_JSON` is unset, return a clear 503 config error instead of falling back.
-- Update `loadUsers()` accordingly; no behavioural change when the secret is properly set.
-- Add a one-line note in the response explaining how to configure the secret.
+- Passwords: bcrypt cost factor 12.
+- Tokens: stored hashed (sha256), single-use, 60-min TTL, cleaned up on each forgot-password call.
+- No user enumeration on `/forgot-password`.
+- Constant-time email compare on `/login`; dummy bcrypt compare on missing user (prevents timing leak).
+- HTTPS required in production — put server behind nginx/Caddy with TLS, OR use Node's `https` module if you have certs locally. README covers both.
+- File writes to `users.json` are atomic (`writeFile` to temp + rename) so a crash mid-reset can't corrupt it.
+- `reset-tokens.json` is auto-pruned of expired entries on every request.
 
-After deploy I'll instruct the user (in the implementation message, not here) to:
-1. Rotate the now-public `cso@2026` password.
-2. Set `CSO_USERS_JSON` with bcrypt-hashed passwords (we'll add bcrypt verification too: import `https://deno.land/x/bcrypt@v0.4.1/mod.ts` and switch `timingSafeEqual` on the password to `bcrypt.compare`). Email comparison stays constant-time.
-3. Treat the two leaked emails as compromised for this service.
+## Deploy steps you'll follow (in README)
 
-## 6. Mark findings resolved
+1. Copy the `cso-auth-server/` folder to your server (scp/rsync).
+2. `cd cso-auth-server && npm install`
+3. `cp .env.example .env` and fill in SMTP + ALLOWED_ORIGINS + APP_URL.
+4. `node server.js` (or `pm2 start server.js --name cso-auth`).
+5. Put it behind nginx on `https://auth.yourdomain.com` (sample nginx block included).
+6. In your frontend deployment, set `VITE_CSO_AUTH_URL=https://auth.yourdomain.com` and rebuild.
+7. Log in with `bavipratik@gmail.com` / `ChangeMe@2026`, immediately use "Forgot password" to rotate.
 
-After the migrations and edge-function deploys land, call `security--manage_security_finding` with `mark_as_fixed` for all seven findings, with explanations referencing each change.
+## Operator helper scripts (bundled)
 
-## Files changed
+- `node hash.js <plaintext>` → prints bcrypt hash you can paste into `users.json`.
+- `node add-admin.js <email> <name> <plaintext>` → appends a new admin entry safely.
 
-| File | Change |
-|---|---|
-| `supabase/migrations/<new>.sql` | Items 1, 2, 3 — RLS tightening + storage cleanup + realtime policy |
-| `supabase/functions/generate-insights/index.ts` | Auth + CSO-role gate + rate limit |
-| `supabase/functions/authenticate-cso/index.ts` | Remove `DEFAULT_USERS`; require `CSO_USERS_JSON`; bcrypt password compare |
+## What I will NOT change
 
-## What this delivers
+- Parichay SSO flow, role-based data isolation, RLS, AI/Gemini layer, or any other portal feature.
+- Other edge functions (`parichay-callback`, `generate-insights`, `process-document`) stay as-is.
 
-- No anonymous reads of identity data, notifications, or storage objects.
-- Realtime notification stream restricted to authenticated subscribers.
-- AI Insights generator can no longer be triggered or bill credits anonymously — only CSO admins.
-- No real names, emails, or passwords remain in source code; the function fails closed without proper configuration.
-- All seven Security Hub findings move from open → fixed.
+## After approval I will
 
-## Operator follow-up (after deploy)
+1. Create the `cso-auth-server/` folder in this repo (so you can download/zip it).
+2. Generate the bcrypt hashes for the seed password and bake them into `users.json`.
+3. Generate a random `JWT_SECRET` and write it into `.env.example` as a working default.
+4. Update `auth-adapter.ts`, `LoginPage.tsx`, add `ResetPasswordPage.tsx`, and register the route.
+5. Update `.env` with a `VITE_CSO_AUTH_URL` placeholder.
+6. Write the README with copy-paste deploy + nginx + PM2 instructions.
 
-- Set `CSO_USERS_JSON` with bcrypt-hashed passwords (format: `[{"id","name","email","password_hash"}]`).
-- Rotate the previously-hardcoded `cso@2026` password.
-- Confirm CSO sign-in still works end-to-end, then verify the Security Hub view is clean.
-
+Then you download the `cso-auth-server/` folder, upload to your server, fill in `.env`, and run it.
