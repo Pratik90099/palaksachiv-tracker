@@ -5,6 +5,7 @@
  * only the `parichay-callback` edge function body needs to change.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { csoLogin } from "./cso-auth-client";
 import { UserRole } from "./mock-data";
 
 export interface AuthUser {
@@ -46,17 +47,20 @@ export async function loginWithParichay(payload?: Record<string, unknown>): Prom
   }
 }
 
-/** Authenticate a CS Office user via email + password. */
+/** Authenticate a CS Office user via email + password (self-hosted server). */
 export async function loginWithCSO(email: string, password: string): Promise<AuthUser> {
-  const { data, error } = await supabase.functions.invoke("authenticate-cso", {
-    body: { email: email.trim(), password },
-  });
-  if (error) throw new Error("Authentication service unavailable. Please try again.");
+  let data: Awaited<ReturnType<typeof csoLogin>>;
+  try {
+    data = await csoLogin(email.trim(), password);
+  } catch (e: any) {
+    throw new Error(e?.message || "Authentication service unavailable. Please try again.");
+  }
   if (!data?.success || !data?.user) {
     throw new Error(data?.error || "Invalid email or password");
   }
   return {
     ...data.user,
+    role: (data.user.role as UserRole) || "system_admin",
     is_cso_admin: true,
   } as AuthUser;
 }
