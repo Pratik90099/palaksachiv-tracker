@@ -1,90 +1,105 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
-import { Shield, Lock, Building2, Globe2, ArrowLeft, Mail, KeyRound } from "lucide-react";
+import { Shield, Lock, Building2, Globe2, ArrowLeft, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { csoLogin, csoForgotPassword } from "@/lib/cso-auth-client";
-import { loginWithParichay } from "@/lib/auth-adapter";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { requestLoginOtp, verifyLoginOtp } from "@/lib/auth-adapter";
+import { UserRole } from "@/lib/mock-data";
 import { toast } from "sonner";
 
+const ROLES: { value: UserRole; label: string; sub: string }[] = [
+  { value: "district_collector", label: "District Collector", sub: "District-level access" },
+  { value: "department_secretary", label: "Secretary of Department", sub: "Department-wide access" },
+  { value: "guardian_secretary", label: "Palak Sachiv / Guardian Secretary", sub: "Assigned districts" },
+  { value: "chief_secretary", label: "Chief Secretary", sub: "State-wide access" },
+  { value: "system_admin", label: "Chief Secretary's Office", sub: "Administrative access" },
+];
+
 export default function LoginPage() {
-  const { loginWithCSOData, setUserFromAdapter } = useAuth();
+  const { setUserFromAdapter } = useAuth();
   const navigate = useNavigate();
-  const [showCSOLogin, setShowCSOLogin] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const [step, setStep] = useState<"identify" | "verify">("identify");
+  const [role, setRole] = useState<UserRole | "">("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [parichayLoading, setParichayLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [resendIn, setResendIn] = useState(0);
 
-  const handleParichayLogin = async () => {
-    setParichayLoading(true);
-    try {
-      const result = await loginWithParichay();
-      if (result.ready && result.user) {
-        setUserFromAdapter(result.user);
-        toast.success(result.message);
-        navigate("/dashboard");
-      } else {
-        toast.info(result.message);
-      }
-    } finally {
-      setParichayLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [resendIn]);
 
-  const handleCSOLogin = async () => {
-    if (!email.trim() || email.length > 255) {
-      setError("Please enter a valid email address");
-      return;
-    }
-    if (!password || password.length > 128) {
-      setError("Please enter a valid password");
-      return;
-    }
-
-    setLoading(true);
+  const handleSendOtp = async () => {
     setError("");
-
+    if (!role) { setError("Please choose a role."); return; }
+    if (!email.trim() || email.length > 255 || !email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    setLoading(true);
     try {
-      const data = await csoLogin(email.trim(), password);
-      if (data?.success && data?.user) {
-        loginWithCSOData(data.user);
-        navigate("/dashboard");
+      const res = await requestLoginOtp(email, role as UserRole);
+      if (!res.sent) {
+        if (res.error === "rate_limited") {
+          setError("Too many requests. Try again in a few minutes.");
+        } else {
+          setError(res.error || "Could not send code.");
+        }
+        return;
+      }
+      setStep("verify");
+      setResendIn(30);
+      if (res.devCode) {
+        // Email infra not yet configured — surface the code for development use.
+        toast.info(`Dev code: ${res.devCode}`, {
+          description: "Email delivery is not yet configured. Use this code to sign in.",
+          duration: 15000,
+        });
       } else {
-        setError(data?.error || "Invalid email or password");
+        toast.success(`Code sent to ${res.recipientEmail || email}`);
       }
     } catch (e: any) {
-      setError(e?.message || "Authentication failed. Please try again.");
+      setError(e?.message || "Could not send code.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!forgotEmail.trim()) return;
-    setForgotLoading(true);
+  const handleVerify = async () => {
+    setError("");
+    if (code.length !== 6) { setError("Enter the 6-digit code."); return; }
+    setLoading(true);
     try {
-      await csoForgotPassword(forgotEmail.trim());
-      toast.success("If that email exists, a reset link has been sent.");
-      setShowForgot(false);
-      setForgotEmail("");
+      const user = await verifyLoginOtp(email, role as UserRole, code);
+      setUserFromAdapter(user);
+      toast.success(`Welcome, ${user.name}`);
+      navigate("/dashboard");
     } catch (e: any) {
-      toast.error(e?.message || "Could not contact the auth server.");
+      setError(e?.message || "Could not verify code.");
     } finally {
-      setForgotLoading(false);
+      setLoading(false);
     }
+  };
+
+  const restart = () => {
+    setStep("identify");
+    setCode("");
+    setError("");
   };
 
   return (
     <div className="min-h-screen flex">
-      {/* Left hero panel */}
       <div className="hidden lg:flex lg:w-[45%] gov-hero-section flex-col justify-between p-10 text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 -left-10 w-72 h-72 rounded-full border border-primary-foreground/20" />
@@ -105,11 +120,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 space-y-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <h2 className="text-4xl font-extrabold leading-tight font-display">
               Guardian Secretary<br />
               <span className="gov-gradient-text">District Monitoring</span><br />
@@ -125,7 +136,7 @@ export default function LoginPage() {
             {[
               { icon: Building2, label: "36 Districts", sub: "Complete coverage" },
               { icon: Globe2, label: "Real-time", sub: "Live monitoring" },
-              { icon: Lock, label: "Parichay SSO", sub: "Secure access" },
+              { icon: Lock, label: "OTP Login", sub: "Passwordless" },
             ].map((item, i) => (
               <motion.div
                 key={item.label}
@@ -143,19 +154,12 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10">
-          <p className="text-[10px] opacity-40">
-            © 2025 Government of Maharashtra. All rights reserved.
-          </p>
+          <p className="text-[10px] opacity-40">© 2026 Government of Maharashtra. All rights reserved.</p>
         </div>
       </div>
 
-      {/* Right login panel */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <Shield className="h-5 w-5 text-primary-foreground" />
@@ -167,175 +171,117 @@ export default function LoginPage() {
           </div>
 
           <AnimatePresence mode="wait">
-            {!showCSOLogin ? (
-              <motion.div
-                key="primary"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
+            {step === "identify" ? (
+              <motion.div key="identify" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-foreground font-display">Sign In</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Choose your authentication method
-                  </p>
-                </div>
-
-                {/* Parichay SSO button */}
-                <button
-                  onClick={handleParichayLogin}
-                  disabled={parichayLoading}
-                  className="w-full mb-4 py-3.5 rounded-lg font-semibold text-sm bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  <Lock className="h-4 w-4" />
-                  {parichayLoading ? "Contacting Parichay..." : "Sign in with Parichay SSO"}
-                </button>
-
-                <div className="flex items-center gap-3 my-6">
-                  <div className="h-px flex-1 bg-border" />
-                  <span className="text-xs text-muted-foreground">or</span>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-
-                <button
-                  onClick={() => { setShowCSOLogin(true); setError(""); }}
-                  className="w-full flex items-center justify-between p-3.5 rounded-lg border border-border bg-card hover:border-primary/30 hover:bg-secondary/50 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center">
-                      <Shield className="h-4 w-4 text-secondary-foreground" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-foreground">Chief Secretary's Office</p>
-                      <p className="text-[10px] text-muted-foreground">Credential login required</p>
-                    </div>
-                  </div>
-                  <Lock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </button>
-
-                <p className="text-[10px] text-muted-foreground text-center mt-6">
-                  Authentication is exclusively through Parichay SSO and authorized CS Office credentials.
-                </p>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="cso-login"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-              >
-                <button
-                  onClick={() => { setShowCSOLogin(false); setError(""); setEmail(""); setPassword(""); }}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </button>
-
-                <div className="text-center mb-8">
-                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                    <Shield className="h-7 w-7 text-primary" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-foreground font-display">Chief Secretary's Office</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Enter your credentials to access the CS Office portal
+                    Choose your role and we'll email you a one-time code
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium text-foreground">Email Address</Label>
+                    <Label className="text-sm font-medium">Sign in as</Label>
+                    <Select value={role} onValueChange={(v) => { setRole(v as UserRole); setError(""); }}>
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLES.map((r) => (
+                          <SelectItem key={r.value} value={r.value}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{r.label}</span>
+                              <span className="text-[10px] text-muted-foreground">{r.sub}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Email Address</Label>
                     <div className="relative mt-1.5">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="email"
                         value={email}
                         onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                        placeholder="your.email@gmail.com"
+                        placeholder="your.email@gov.in"
                         className="pl-10"
                         maxLength={255}
-                        onKeyDown={(e) => e.key === "Enter" && handleCSOLogin()}
+                        onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-foreground">Password</Label>
-                    <div className="relative mt-1.5">
-                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                        placeholder="••••••••"
-                        className="pl-10"
-                        maxLength={128}
-                        onKeyDown={(e) => e.key === "Enter" && handleCSOLogin()}
-                      />
-                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1.5">
+                      The code will be sent to your registered email (and phone, once SMS is enabled).
+                    </p>
                   </div>
 
                   {error && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg"
-                    >
-                      {error}
-                    </motion.p>
+                    <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
                   )}
 
-                  <Button
-                    onClick={handleCSOLogin}
-                    disabled={loading || !email || !password}
-                    className="w-full py-3"
-                  >
-                    {loading ? "Signing in..." : "Sign In to CS Office"}
+                  <Button onClick={handleSendOtp} disabled={loading} className="w-full py-3">
+                    {loading ? "Sending code..." : "Send one-time code"}
+                  </Button>
+                </div>
+
+                <p className="text-[10px] text-muted-foreground text-center mt-6">
+                  Access is limited to officers registered in the Officer Directory.
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div key="verify" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                <button
+                  onClick={restart}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Use a different email
+                </button>
+
+                <div className="text-center mb-8">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                    <Mail className="h-7 w-7 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-foreground font-display">Enter your code</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    We sent a 6-digit code to <span className="font-medium text-foreground">{email}</span>
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    <InputOTP maxLength={6} value={code} onChange={(v) => { setCode(v); setError(""); }}>
+                      <InputOTPGroup>
+                        {[0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} />)}
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+
+                  {error && (
+                    <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg text-center">{error}</p>
+                  )}
+
+                  <Button onClick={handleVerify} disabled={loading || code.length !== 6} className="w-full py-3">
+                    {loading ? "Verifying..." : "Verify & sign in"}
                   </Button>
 
                   <button
                     type="button"
-                    onClick={() => { setShowForgot((v) => !v); setForgotEmail(email); }}
-                    className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors"
+                    onClick={handleSendOtp}
+                    disabled={resendIn > 0 || loading}
+                    className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
                   >
-                    Forgot password?
+                    {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
                   </button>
-
-                  {showForgot && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="space-y-2 p-3 rounded-lg border border-border bg-muted/30"
-                    >
-                      <Label className="text-xs font-medium">Send a reset link to:</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="email"
-                          value={forgotEmail}
-                          onChange={(e) => setForgotEmail(e.target.value)}
-                          placeholder="your.email@gmail.com"
-                          maxLength={255}
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleForgotPassword}
-                          disabled={forgotLoading || !forgotEmail.trim()}
-                          variant="secondary"
-                        >
-                          {forgotLoading ? "Sending..." : "Send"}
-                        </Button>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        We'll email a one-time link valid for 60 minutes.
-                      </p>
-                    </motion.div>
-                  )}
                 </div>
 
                 <div className="mt-6 p-3 rounded-lg bg-muted/50 border border-border">
                   <p className="text-[10px] text-muted-foreground text-center">
-                    Access restricted to authorized Chief Secretary's Office personnel.
+                    Code is valid for 10 minutes. Locks after 5 wrong attempts.
                   </p>
                 </div>
               </motion.div>
