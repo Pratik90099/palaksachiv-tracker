@@ -87,17 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [realUser]);
 
 
-  const loginWithCSOData = (userData: { id: string; name: string; email: string; designation: string; role: string }) => {
-    setUser({
-      id: userData.id,
-      name: userData.name,
-      designation: userData.designation,
-      role: userData.role as UserRole,
-      email: userData.email,
-      is_cso_admin: true,
-    });
-  };
-
   const setUserFromAdapter = (u: User) => setUser(u);
 
   const impersonateOfficer = async (officerId: string) => {
