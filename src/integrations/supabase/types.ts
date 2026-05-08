@@ -234,6 +234,42 @@ export type Database = {
         }
         Relationships: []
       }
+      login_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          officer_id: string | null
+          role: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          officer_id?: string | null
+          role: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          officer_id?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
       meeting_minutes: {
         Row: {
           action_items: string[] | null
@@ -351,8 +387,10 @@ export type Database = {
           id: string
           is_active: boolean
           is_cso_admin: boolean
+          is_palak_sachiv: boolean
           name: string
           parichay_uid: string | null
+          phone: string | null
           role: string
           updated_at: string
         }
@@ -365,8 +403,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_cso_admin?: boolean
+          is_palak_sachiv?: boolean
           name: string
           parichay_uid?: string | null
+          phone?: string | null
           role?: string
           updated_at?: string
         }
@@ -379,8 +419,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_cso_admin?: boolean
+          is_palak_sachiv?: boolean
           name?: string
           parichay_uid?: string | null
+          phone?: string | null
           role?: string
           updated_at?: string
         }
@@ -792,7 +834,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      find_login_officer: {
+        Args: { _email: string; _role: string }
+        Returns: {
+          created_at: string
+          department_id: string | null
+          designation: string | null
+          district_id: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          is_cso_admin: boolean
+          is_palak_sachiv: boolean
+          name: string
+          parichay_uid: string | null
+          phone: string | null
+          role: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "officers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      request_login_otp: {
+        Args: { _email: string; _role: string }
+        Returns: Json
+      }
+      verify_login_otp: {
+        Args: { _code: string; _email: string; _role: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
