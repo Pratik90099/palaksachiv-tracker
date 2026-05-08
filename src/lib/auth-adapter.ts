@@ -1,11 +1,7 @@
 /**
- * Auth Adapter — pluggable login layer.
- *
- * One swap-point for e-Parichay SSO: when production credentials arrive,
- * only the `parichay-callback` edge function body needs to change.
+ * Auth Adapter — passwordless OTP login backed by Postgres functions.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { csoLogin } from "./cso-auth-client";
 import { UserRole } from "./mock-data";
 
 export interface AuthUser {
@@ -18,51 +14,72 @@ export interface AuthUser {
   department?: string;
   email: string;
   is_cso_admin?: boolean;
-  parichay_uid?: string;
+  phone?: string;
 }
 
-/** Attempt SSO login via the Parichay callback edge function. */
-export async function loginWithParichay(payload?: Record<string, unknown>): Promise<{
-  user: AuthUser | null;
-  message: string;
-  ready: boolean;
-}> {
-  try {
-    const { data, error } = await supabase.functions.invoke("parichay-callback", {
-      body: payload || {},
-    });
-    if (error) {
-      return { user: null, message: "Parichay SSO is awaiting production credentials.", ready: false };
-    }
-    if (data?.success && data?.user) {
-      return { user: data.user as AuthUser, message: "Signed in with Parichay", ready: true };
-    }
-    return {
-      user: null,
-      message: data?.message || "Parichay SSO is awaiting production credentials.",
-      ready: false,
-    };
-  } catch {
-    return { user: null, message: "Parichay SSO is awaiting production credentials.", ready: false };
-  }
+export interface OtpRequestResult {
+  sent: boolean;
+  error?: string;
+  /** Dev-only: the plaintext code, returned until email delivery is wired up. */
+  devCode?: string;
+  recipientEmail?: string;
 }
 
-/** Authenticate a CS Office user via email + password (self-hosted server). */
-export async function loginWithCSO(email: string, password: string): Promise<AuthUser> {
-  let data: Awaited<ReturnType<typeof csoLogin>>;
-  try {
-    data = await csoLogin(email.trim(), password);
-  } catch (e: any) {
-    throw new Error(e?.message || "Authentication service unavailable. Please try again.");
+/** Step 1 — request a one-time code for (email, role). */
+export async function requestLoginOtp(email: string, role: UserRole): Promise<OtpRequestResult> {
+  const { data, error } = await supabase.rpc("request_login_otp", {
+    _email: email.trim().toLowerCase(),
+    _role: role,
+  });
+  if (error) return { sent: false, error: error.message };
+  const r = (data ?? {}) as Record<string, unknown>;
+  if (!r.sent) return { sent: false, error: (r.error as string) || "Could not send code" };
+
+  // Try to dispatch the email (no-op if email infra isn't configured).
+  if (r.otp_id) {
+    supabase.functions
+      .invoke("send-login-otp", { body: { otp_id: r.otp_id } })
+      .catch(() => {/* dev fallback uses devCode */});
   }
-  if (!data?.success || !data?.user) {
-    throw new Error(data?.error || "Invalid email or password");
-  }
+
   return {
-    ...data.user,
-    role: (data.user.role as UserRole) || "system_admin",
-    is_cso_admin: true,
-  } as AuthUser;
+    sent: true,
+    devCode: r.dev_code as string | undefined,
+    recipientEmail: r.recipient_email as string | undefined,
+  };
+}
+
+/** Step 2 — verify the 6-digit code and return the officer. */
+export async function verifyLoginOtp(email: string, role: UserRole, code: string): Promise<AuthUser> {
+  const { data, error } = await supabase.rpc("verify_login_otp", {
+    _email: email.trim().toLowerCase(),
+    _role: role,
+    _code: code.trim(),
+  });
+  if (error) throw new Error(error.message);
+  const r = (data ?? {}) as Record<string, unknown>;
+  if (!r.success) {
+    const code = r.error as string;
+    const msg =
+      code === "invalid_code" ? "Incorrect code. Please try again." :
+      code === "no_active_code" ? "Code expired or not found. Request a new one." :
+      code === "officer_inactive" ? "Your account is inactive. Contact CSO." :
+      "Could not verify code.";
+    throw new Error(msg);
+  }
+  const u = r.user as Record<string, unknown>;
+  return {
+    id: u.id as string,
+    name: u.name as string,
+    email: u.email as string,
+    designation: (u.designation as string) || "",
+    role: u.role as UserRole,
+    district: u.district as string | undefined,
+    division: u.division as string | undefined,
+    department: u.department as string | undefined,
+    is_cso_admin: !!u.is_cso_admin,
+    phone: u.phone as string | undefined,
+  };
 }
 
 /** Look up an officer by ID for CS Office impersonation. */
@@ -83,6 +100,6 @@ export async function loginAsOfficer(officerId: string): Promise<AuthUser> {
     division: (data as any).districts?.division,
     department: (data as any).departments?.short_name || (data as any).departments?.name,
     is_cso_admin: data.is_cso_admin,
-    parichay_uid: data.parichay_uid || undefined,
+    phone: (data as any).phone || undefined,
   };
 }
