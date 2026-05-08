@@ -118,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         realUser,
         viewingAs: !!realUser,
-        loginWithCSOData,
         setUserFromAdapter,
         impersonateOfficer,
         stopImpersonating,
