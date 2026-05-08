@@ -14,9 +14,7 @@ interface AuthContextType {
   realUser: User | null;
   /** True when the current session is impersonating another officer */
   viewingAs: boolean;
-  /** Set a CSO-authenticated user from edge-function payload. */
-  loginWithCSOData: (userData: { id: string; name: string; email: string; designation: string; role: string }) => void;
-  /** Set a fully-formed user (used by Parichay SSO and the adapter). */
+  /** Set a fully-formed user (used by all login flows). */
   setUserFromAdapter: (user: User) => void;
   /** CS Office: impersonate another officer by id. */
   impersonateOfficer: (officerId: string) => Promise<void>;
@@ -89,17 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [realUser]);
 
 
-  const loginWithCSOData = (userData: { id: string; name: string; email: string; designation: string; role: string }) => {
-    setUser({
-      id: userData.id,
-      name: userData.name,
-      designation: userData.designation,
-      role: userData.role as UserRole,
-      email: userData.email,
-      is_cso_admin: true,
-    });
-  };
-
   const setUserFromAdapter = (u: User) => setUser(u);
 
   const impersonateOfficer = async (officerId: string) => {
@@ -131,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         realUser,
         viewingAs: !!realUser,
-        loginWithCSOData,
         setUserFromAdapter,
         impersonateOfficer,
         stopImpersonating,
