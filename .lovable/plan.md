@@ -1,107 +1,96 @@
-## Goal
 
-Replace Parichay SSO + CSO password login with a single **passwordless OTP login** for all 5 roles. OTP is a 6-digit code, valid 10 minutes, sent to the officer's email (SMS hook stubbed for later).
+# Fix OTP Email + Validate Role Isolation
 
-## The 5 roles (login dropdown)
+## 1. Real email delivery (replace dev toast)
 
-1. **District Collector** (`collector`)
-2. **Department Secretary** (`department_secretary`)
-3. **Palak Sachiv / Guardian Secretary** (`guardian_secretary`) — note: every Palak Sachiv is also a Department Secretary, but not vice versa
-4. **Chief Secretary** (`chief_secretary`)
-5. **Chief Secretary's Office** (`system_admin`) — replaces the existing CSO password login
+The portal currently returns the OTP in the API response and shows it as a "Dev code" toast because no email infrastructure was configured. To deliver real emails we need a verified sender domain.
 
-## Login UX (`/login`)
+**Step 1 — Set up Lovable Emails (one-time):**
+You'll be prompted to add and verify a sender subdomain (e.g. `notify.yourdomain.gov.in`). DNS verification can take up to 72 hours, but scaffolding and code changes proceed immediately.
 
-```
-┌────────────────────────────────┐
-│ Sign in to GS Portal           │
-│ Role:   [▼ Select role     ]   │
-│ Email:  [ name@gov.in       ]  │
-│         [ Send OTP          ]  │
-└────────────────────────────────┘
-       ↓ after Send OTP
-┌────────────────────────────────┐
-│ Enter the 6-digit code we      │
-│ emailed to n***@gov.in         │
-│ [ _ _ _ _ _ _ ]                │
-│ [ Verify & sign in ]           │
-│ Resend in 30s                  │
-└────────────────────────────────┘
-```
+**Step 2 — Scaffold transactional email infrastructure:**
+- Provisions the email queue, suppression list, send log, unsubscribe handler
+- Creates the `send-transactional-email` edge function
 
-- Role + email are validated together — the email must belong to an officer with that role (or the Palak-Sachiv mapping below).
-- Phone field on form: **none** (we'll send to whatever phone is on file once SMS is wired).
-- Generic message on failure ("If that email matches an active officer, a code has been sent") — no enumeration.
+**Step 3 — Create a branded `login-otp` template:**
+- React Email component matching the portal's navy/gold/Plus Jakarta Sans branding
+- Shows the 6-digit code, 10-minute validity warning, role being signed in to, and a "didn't request this?" notice
+- Registered in the templates registry
 
-## Database changes (Supabase migration)
+**Step 4 — Rewrite `send-login-otp` edge function:**
+- Look up the OTP record + officer
+- Re-issue the plaintext code (the current RPC already returns it once at request time; we'll pass it through to the dispatcher instead of storing it)
+- Invoke `send-transactional-email` with `templateName: 'login-otp'`, recipient = officer email, idempotency key = `otp-{otp_id}`
 
-1. `**officers.phone**` — add `text` column, nullable. Seed left empty; populated later.
-2. `**officers.is_palak_sachiv**` — add `boolean default false`. A Department Secretary row with this true also appears as a Palak Sachiv at login.
-3. `**login_otps**` table:
-  - `id uuid pk`, `officer_id uuid`, `email citext`, `role text`, `code_hash text`, `expires_at timestamptz`, `consumed_at timestamptz`, `attempts int default 0`, `created_at timestamptz default now()`
-  - RLS on, **no policies** (only RPCs touch it)
-4. `**pgcrypto**` + `**citext**` extensions
-5. **RPC `request_login_otp(_email, _role)**` — `SECURITY DEFINER`:
-  - Looks up active officer matching email + role (special case: role=`guardian_secretary` matches officers where `role='department_secretary' AND is_palak_sachiv=true`, or guardian_secretaries table)
-  - Rate limit: max 3 active OTPs / email / 15 min
-  - Generates 6-digit code, stores **bcrypt hash** (`crypt(code, gen_salt('bf'))`), 10 min TTL, invalidates prior OTPs for that email
-  - Returns `{ sent: true, otp_id, dev_code }` — `dev_code` only returned in non-prod (gated by app setting); prod returns just `{ sent: true }`
-  - Calls `pg_notify('login_otp', json)` so an edge function can pick it up and send the email
-6. **RPC `verify_login_otp(_email, _role, _code)**` — `SECURITY DEFINER`:
-  - Finds latest unconsumed OTP for email/role, increments attempts, locks after 5 wrong tries
-  - On match: marks consumed, returns officer row `(id, name, email, role, designation, district_id, department_id, is_cso_admin)`
-7. Drop `cso_admins` table + `verify_cso_admin` / `set_cso_admin_password` functions (from previous plan).
+**Step 5 — Stop leaking `dev_code` to the client:**
+- `request_login_otp` RPC: remove `dev_code` from the JSON response
+- `send-login-otp`: accept the plaintext code via the RPC call chain (the simplest path — have the frontend continue to receive `otp_id`, but the RPC also writes the code to a short-lived signed payload that only the edge function can read; or, simpler, generate the code inside the edge function and have the RPC accept a pre-hashed code)
+- Frontend: drop the dev toast, only show "Code sent to your registered email"
 
-## Email delivery (OTP email)
+> Implementation choice: simplest is to keep the RPC generating the code and pass it to the edge function via a short SECURITY DEFINER helper `consume_pending_otp_for_dispatch(otp_id)` that returns plaintext exactly once and only to the service-role caller. This keeps the code from ever reaching the browser.
 
-- Use **Lovable Cloud transactional email** (built-in, no Resend/SMTP setup).
-- New edge function `**send-login-otp**`:
-  - Called by frontend right after `request_login_otp` succeeds (passes `otp_id`).
-  - Re-fetches the OTP row + officer (service role) and sends a branded email: subject "Welcome, Your GS Portal login code: 123456", body with code, 10-min validity, "didn't request this - ignore".
-  - Returns `{ success: true }`.
-- One scaffold step: set up email infra (`setup_email_infra` + `scaffold_transactional_email`) on the project's existing email domain. If no domain configured yet, the build step will surface the email-domain setup dialog.
-- **SMS later**: leave a `// TODO: dispatch SMS via Twilio` block in `send-login-otp` so wiring it up later is one connector + a few lines.
+## 2. Resend code UX
 
-## Frontend changes
+The current `LoginPage` already has a 30s countdown + disabled state — it works but doesn't surface backend rate-limit responses well.
 
-- `**src/pages/LoginPage.tsx**` — full rewrite:
-  - Role `<Select>` with 5 options
-  - Step 1 form: email + role → calls `supabase.rpc('request_login_otp')` → calls `supabase.functions.invoke('send-login-otp')`
-  - Step 2: 6-digit OTP via `<InputOTP>` → calls `supabase.rpc('verify_login_otp')` → on success, hydrate auth context and navigate to `/`
-  - Resend cooldown timer, error states, "Use a different email" link
-- `**src/lib/auth-adapter.ts**` — replace `loginWithParichay` and `loginWithCSO` with a single `loginWithOtp(email, role, code)`. `loginAsOfficer` (CSO impersonation) stays.
-- **Delete**:
-  - `src/lib/cso-auth-client.ts`
-  - `src/pages/ResetPasswordPage.tsx` (passwordless = no reset)
-  - Routes/imports for `/reset-password` in `App.tsx`
-  - `cso-auth-server/` folder (no longer used)
-  - `supabase/functions/parichay-callback/` (no longer used)
-- `**package.json**` — remove `bcryptjs` + `@types/bcryptjs` (frontend bcrypt no longer needed; hashing happens in Postgres).
-- `**src/lib/auth-context.tsx**` — keep shape, just store the officer returned by `verify_login_otp`.
+Improvements:
+- When the RPC returns `rate_limited`, show "Too many attempts. Try again in ~15 minutes." and disable Resend for 60s
+- Add a small "Code didn't arrive? Check spam, or resend in {Ns}" hint
+- Increase initial cooldown to 60s (matches the 3-OTP-per-15-min backend cap better)
 
-## Seed data
+## 3. Test admin account
 
-- Set `is_palak_sachiv = true` and `phone` on the two existing admin emails (`bavipratik@gmail.com`, `rishishirke65@gmail.com`) so they can sign in as `system_admin` immediately.
-- Anyone else needs an officer row with their email + role first (existing Officer Directory page handles that).
+Add `test.admin@gmail.com` to the officers table with:
+- `role = 'system_admin'`
+- `is_cso_admin = true`
+- `is_palak_sachiv = true` (so it can also test the Guardian Secretary path)
+- `is_active = true`
 
-## Security
+Since login is **passwordless OTP** (per the prior plan you approved), there is no password. The shared password "TestGSPortal@2026" cannot be used — that contradicts the OTP-only architecture. Instead this test account will receive OTP codes by email like every other officer.
 
-- Codes never leave the DB in plaintext after `request_login_otp` returns (hashed with bcrypt cost 10).
-- Rate limit per email; attempt limit per OTP.
-- RLS denies all direct reads of `login_otps`; only `SECURITY DEFINER` RPCs touch it.
-- Email enumeration prevented by uniform "if exists, code sent" response.
-- Session: same auth-context behavior as today (30 min idle timeout per existing memory).
+> If you actually want a password fallback for QA, that's a separate decision — say the word and I'll add a "QA bypass code" path gated to a single seeded account. Otherwise we keep OTP-only.
 
-## Out of scope (called out so it's not forgotten)
+## 4. Role-based data isolation tests
 
-- SMS delivery (stub only)
-- Self-service phone-number update UI for officers (admin edits via Officer Directory)
-- Hardware-token / WebAuthn — not requested
+Add a Playwright test suite (`tests/role-isolation.spec.ts`) that, for each of the 5 roles:
+1. Requests an OTP for a seeded officer
+2. Reads the code from the `login_otps` table directly (test-only Supabase service-role client)
+3. Verifies login → lands on `/dashboard`
+4. Visits Projects, Visits, Issues, Compliance pages and asserts the row counts / district filters match expectations:
+   - **District Collector** → only their district's rows
+   - **Department Secretary** → only their department's rows (all districts)
+   - **Palak Sachiv** → only assigned districts
+   - **Chief Secretary / CSO** → state-wide (all rows visible)
 
-## Deliverables
+Seeds 1 officer per role in `tests/fixtures/seed-officers.sql`.
 
-1. One Supabase migration (extensions, columns, table, 2 RPCs, drop old admin objects)
-2. Email infra scaffolded + `send-login-otp` edge function deployed
-3. Rewritten `LoginPage.tsx`, slimmed `auth-adapter.ts`, updated `App.tsx`
-4. Cleanup of dead Parichay / CSO-password / bcrypt code
-5. Memory update: replace the "Parichay SSO + CSO edge function + mock" auth rule with "OTP-only, 5 roles, email now / SMS later"
+## 5. Smoke-test all login options
+
+Manual matrix walked through after deploy:
+- Each of the 5 dropdown roles with a seeded email
+- Wrong code → "Incorrect code"
+- Expired code → "Code expired"
+- 5 wrong attempts → lockout
+- Resend before/after countdown
+- Rate-limit (4th request in 15 min) → friendly error
+
+## Technical Details
+
+**Files changed:**
+- `supabase/migrations/<new>.sql` — `request_login_otp` no longer returns `dev_code`; new `consume_pending_otp_for_dispatch` SECURITY DEFINER function; seed `test.admin@gmail.com`
+- `supabase/functions/send-login-otp/index.ts` — fetch plaintext code via dispatch RPC, invoke `send-transactional-email`
+- `supabase/functions/_shared/transactional-email-templates/login-otp.tsx` — new template
+- `supabase/functions/_shared/transactional-email-templates/registry.ts` — register template
+- `src/pages/LoginPage.tsx` — drop dev toast, longer cooldown, better rate-limit messaging
+- `src/lib/auth-adapter.ts` — drop `devCode` field
+- `tests/role-isolation.spec.ts` + `tests/fixtures/seed-officers.sql` — new
+
+**Deploy order:** migration → setup_email_infra → scaffold_transactional_email → write template + edit send-login-otp → deploy edge functions → frontend changes → run Playwright suite.
+
+**Out of scope:** SMS delivery (per earlier decision), Resend/SendGrid (Lovable Emails is the default).
+
+---
+
+To proceed, please:
+1. **Confirm we should set up the email sender domain now** (you'll get a setup dialog with DNS instructions).
+2. **Confirm OTP-only for the test admin** (no password), or tell me you want a QA password bypass instead.
