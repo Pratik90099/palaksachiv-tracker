@@ -834,6 +834,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_pending_otp_for_dispatch: {
+        Args: { _otp_id: string }
+        Returns: Json
+      }
       find_login_officer: {
         Args: { _email: string; _role: string }
         Returns: {
