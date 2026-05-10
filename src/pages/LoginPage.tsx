@@ -53,6 +53,7 @@ export default function LoginPage() {
       if (!res.sent) {
         if (res.error === "rate_limited") {
           setError("Too many requests. Try again in a few minutes.");
+          setResendIn(60);
         } else {
           setError(res.error || "Could not send code.");
         }
@@ -279,7 +280,7 @@ export default function LoginPage() {
 
                 <div className="mt-6 p-3 rounded-lg bg-muted/50 border border-border">
                   <p className="text-[10px] text-muted-foreground text-center">
-                    Code is valid for 10 minutes. Locks after 5 wrong attempts.
+                    Didn't get it? Check your spam folder. Code is valid for 10 minutes and locks after 5 wrong attempts.
                   </p>
                 </div>
               </motion.div>
