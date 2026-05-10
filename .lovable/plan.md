@@ -1,96 +1,99 @@
 
-# Fix OTP Email + Validate Role Isolation
+# Gmail OTP delivery + QA bypass code
 
-## 1. Real email delivery (replace dev toast)
-
-The portal currently returns the OTP in the API response and shows it as a "Dev code" toast because no email infrastructure was configured. To deliver real emails we need a verified sender domain.
-
-**Step 1 — Set up Lovable Emails (one-time):**
-You'll be prompted to add and verify a sender subdomain (e.g. `notify.yourdomain.gov.in`). DNS verification can take up to 72 hours, but scaffolding and code changes proceed immediately.
-
-**Step 2 — Scaffold transactional email infrastructure:**
-- Provisions the email queue, suppression list, send log, unsubscribe handler
-- Creates the `send-transactional-email` edge function
-
-**Step 3 — Create a branded `login-otp` template:**
-- React Email component matching the portal's navy/gold/Plus Jakarta Sans branding
-- Shows the 6-digit code, 10-minute validity warning, role being signed in to, and a "didn't request this?" notice
-- Registered in the templates registry
-
-**Step 4 — Rewrite `send-login-otp` edge function:**
-- Look up the OTP record + officer
-- Re-issue the plaintext code (the current RPC already returns it once at request time; we'll pass it through to the dispatcher instead of storing it)
-- Invoke `send-transactional-email` with `templateName: 'login-otp'`, recipient = officer email, idempotency key = `otp-{otp_id}`
-
-**Step 5 — Stop leaking `dev_code` to the client:**
-- `request_login_otp` RPC: remove `dev_code` from the JSON response
-- `send-login-otp`: accept the plaintext code via the RPC call chain (the simplest path — have the frontend continue to receive `otp_id`, but the RPC also writes the code to a short-lived signed payload that only the edge function can read; or, simpler, generate the code inside the edge function and have the RPC accept a pre-hashed code)
-- Frontend: drop the dev toast, only show "Code sent to your registered email"
-
-> Implementation choice: simplest is to keep the RPC generating the code and pass it to the edge function via a short SECURITY DEFINER helper `consume_pending_otp_for_dispatch(otp_id)` that returns plaintext exactly once and only to the service-role caller. This keeps the code from ever reaching the browser.
-
-## 2. Resend code UX
-
-The current `LoginPage` already has a 30s countdown + disabled state — it works but doesn't surface backend rate-limit responses well.
-
-Improvements:
-- When the RPC returns `rate_limited`, show "Too many attempts. Try again in ~15 minutes." and disable Resend for 60s
-- Add a small "Code didn't arrive? Check spam, or resend in {Ns}" hint
-- Increase initial cooldown to 60s (matches the 3-OTP-per-15-min backend cap better)
-
-## 3. Test admin account
-
-Add `test.admin@gmail.com` to the officers table with:
-- `role = 'system_admin'`
-- `is_cso_admin = true`
-- `is_palak_sachiv = true` (so it can also test the Guardian Secretary path)
-- `is_active = true`
-
-Since login is **passwordless OTP** (per the prior plan you approved), there is no password. The shared password "TestGSPortal@2026" cannot be used — that contradicts the OTP-only architecture. Instead this test account will receive OTP codes by email like every other officer.
-
-> If you actually want a password fallback for QA, that's a separate decision — say the word and I'll add a "QA bypass code" path gated to a single seeded account. Otherwise we keep OTP-only.
-
-## 4. Role-based data isolation tests
-
-Add a Playwright test suite (`tests/role-isolation.spec.ts`) that, for each of the 5 roles:
-1. Requests an OTP for a seeded officer
-2. Reads the code from the `login_otps` table directly (test-only Supabase service-role client)
-3. Verifies login → lands on `/dashboard`
-4. Visits Projects, Visits, Issues, Compliance pages and asserts the row counts / district filters match expectations:
-   - **District Collector** → only their district's rows
-   - **Department Secretary** → only their department's rows (all districts)
-   - **Palak Sachiv** → only assigned districts
-   - **Chief Secretary / CSO** → state-wide (all rows visible)
-
-Seeds 1 officer per role in `tests/fixtures/seed-officers.sql`.
-
-## 5. Smoke-test all login options
-
-Manual matrix walked through after deploy:
-- Each of the 5 dropdown roles with a seeded email
-- Wrong code → "Incorrect code"
-- Expired code → "Code expired"
-- 5 wrong attempts → lockout
-- Resend before/after countdown
-- Rate-limit (4th request in 15 min) → friendly error
-
-## Technical Details
-
-**Files changed:**
-- `supabase/migrations/<new>.sql` — `request_login_otp` no longer returns `dev_code`; new `consume_pending_otp_for_dispatch` SECURITY DEFINER function; seed `test.admin@gmail.com`
-- `supabase/functions/send-login-otp/index.ts` — fetch plaintext code via dispatch RPC, invoke `send-transactional-email`
-- `supabase/functions/_shared/transactional-email-templates/login-otp.tsx` — new template
-- `supabase/functions/_shared/transactional-email-templates/registry.ts` — register template
-- `src/pages/LoginPage.tsx` — drop dev toast, longer cooldown, better rate-limit messaging
-- `src/lib/auth-adapter.ts` — drop `devCode` field
-- `tests/role-isolation.spec.ts` + `tests/fixtures/seed-officers.sql` — new
-
-**Deploy order:** migration → setup_email_infra → scaffold_transactional_email → write template + edit send-login-otp → deploy edge functions → frontend changes → run Playwright suite.
-
-**Out of scope:** SMS delivery (per earlier decision), Resend/SendGrid (Lovable Emails is the default).
+Two changes bundled together:
+1. Replace the dev-toast with **real OTP emails sent from Gmail** (free, no domain needed)
+2. Add a **QA bypass code `567890`** that always works for `pratikbbavi@gmail.com`
 
 ---
 
-To proceed, please:
-1. **Confirm we should set up the email sender domain now** (you'll get a setup dialog with DNS instructions).
-2. **Confirm OTP-only for the test admin** (no password), or tell me you want a QA password bypass instead.
+## 1. Gmail-based OTP delivery
+
+Use the **Gmail connector** — sends OTPs from your own Gmail account via the Lovable connector gateway.
+
+**Trade-offs:**
+- ✅ Free, no DNS, no domain wait
+- ✅ Sends from a real Gmail address you control
+- ⚠️ Recipients see your Gmail address as sender (not `@gov.in`)
+- ⚠️ ~500 sends/day Gmail limit (plenty for portal logins)
+- Later swap-in: branded `@yourdomain` via Lovable Emails — no rewrites needed
+
+**Steps:**
+1. **Connect Gmail** — one-click OAuth, grant `gmail.send` scope. Sign in with whatever Gmail account should be the sender (e.g. a project ops mailbox).
+2. **Migration:**
+   - Drop `dev_code` from `request_login_otp` JSON response (no more leaking codes to the browser)
+   - New `consume_pending_otp_for_dispatch(otp_id uuid)` SECURITY DEFINER function — returns `{code, recipient_email, recipient_name, role}` exactly once, marks OTP as dispatched
+3. **Rewrite `send-login-otp` edge function:**
+   - Accept `{otp_id}` from frontend
+   - Call `consume_pending_otp_for_dispatch` via service-role Supabase client
+   - Build branded HTML email (navy header, gold accent, large monospace 6-digit code, 10-min validity, "didn't request?" footer)
+   - POST to `https://connector-gateway.lovable.dev/google_mail/gmail/v1/users/me/messages/send` with base64url-encoded RFC-2822 message
+   - Auth headers: `Authorization: Bearer ${LOVABLE_API_KEY}`, `X-Connection-Api-Key: ${GOOGLE_MAIL_API_KEY}`
+4. **Frontend cleanup:**
+   - `auth-adapter.ts`: remove `devCode` field from `OtpRequestResult`
+   - `LoginPage.tsx`: drop dev toast, just show "Code sent to your registered email — check spam"
+
+---
+
+## 2. QA bypass code
+
+Whitelist: `pratikbbavi@gmail.com` + bypass code `567890`.
+
+**Implementation in `verify_login_otp` RPC** (single change, server-side enforced):
+```sql
+-- At the top of verify_login_otp, before the OTP lookup:
+IF lower(_email) = 'pratikbbavi@gmail.com' AND _code = '567890' THEN
+  -- Skip OTP table check; load officer directly
+  v_officer := public.find_login_officer(_email::citext, _role);
+  IF v_officer.id IS NULL OR v_officer.is_active = false THEN
+    RETURN jsonb_build_object('success', false, 'error', 'officer_inactive');
+  END IF;
+  -- ...build same success response as normal path...
+END IF;
+```
+
+**Companion changes:**
+- Seed `pratikbbavi@gmail.com` into `officers` if not already there: `role = department_secretary`, `is_cso_admin = true`, `is_palak_sachiv = true`, `is_active = true`. With these flags they can sign in as **all 5 roles** (collector test will need a `district_id` — assign Pune so the role works).
+- Wait — collector role isn't auto-granted by flags. To let one email test all 5 roles, the simplest path is to update `find_login_officer` to also allow the bypass email through `district_collector` and `chief_secretary` paths. I'll add a small whitelist: if the email is `pratikbbavi@gmail.com`, any of the 5 roles is allowed.
+- Frontend: no changes needed — the user just types `567890` like a normal code.
+
+**Security note:** The bypass is hard-coded server-side in a SECURITY DEFINER function. Plaintext code never leaves the DB. Restricted to one specific email. To remove later: one-line migration. I'll add a clear `-- QA BYPASS — REMOVE BEFORE PRODUCTION` comment.
+
+---
+
+## 3. Test admin (`test.admin@gmail.com`)
+Seeded into `officers` with `system_admin` + `is_cso_admin` + `is_palak_sachiv = true`. **Receives real Gmail OTP** (no bypass — only the pratikbbavi email gets the bypass).
+
+If you want the bypass code to work for `test.admin@gmail.com` too, say so and I'll add it.
+
+---
+
+## 4. Resend UX polish (small)
+- Initial cooldown 30s → 60s (matches the 3/15min backend rate-limit better)
+- On `rate_limited` from RPC → show "Too many requests — try again in a few minutes" and disable Resend for 60s
+- Tiny "Didn't get it? Check spam." hint under the OTP input
+
+---
+
+## 5. Smoke-test all login options
+After deploy, manual matrix:
+- All 5 roles via `pratikbbavi@gmail.com` + bypass `567890` → instant login → land on Home
+- `test.admin@gmail.com` → real Gmail OTP → check inbox → verify
+- Wrong code, expired, 5-attempt lockout, resend cooldown, rate-limit
+- After login as each role: confirm the data scoping (Projects/Visits page row counts match the role)
+
+---
+
+## Files
+
+- `supabase/migrations/<new>.sql` — `consume_pending_otp_for_dispatch`, updated `request_login_otp`, updated `verify_login_otp` (with QA bypass), updated `find_login_officer` (allow bypass email through all roles)
+- Insert: seed `pratikbbavi@gmail.com` and `test.admin@gmail.com` officers
+- `supabase/functions/send-login-otp/index.ts` — Gmail send via gateway
+- `src/lib/auth-adapter.ts` — drop `devCode`
+- `src/pages/LoginPage.tsx` — drop dev toast, polish resend
+
+## Order of operations
+1. You approve plan
+2. Connect Gmail (one-click prompt)
+3. Migration → seed → edge function → frontend → deploy
+4. You test: bypass code instant-login as any role with `pratikbbavi@gmail.com` + `567890`, real OTP at `test.admin@gmail.com`
