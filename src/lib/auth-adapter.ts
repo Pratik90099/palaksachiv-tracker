@@ -20,9 +20,8 @@ export interface AuthUser {
 export interface OtpRequestResult {
   sent: boolean;
   error?: string;
-  /** Dev-only: the plaintext code, returned until email delivery is wired up. */
-  devCode?: string;
   recipientEmail?: string;
+  bypass?: boolean;
 }
 
 /** Step 1 — request a one-time code for (email, role). */
@@ -35,18 +34,22 @@ export async function requestLoginOtp(email: string, role: UserRole): Promise<Ot
   const r = (data ?? {}) as Record<string, unknown>;
   if (!r.sent) return { sent: false, error: (r.error as string) || "Could not send code" };
 
-  // Try to dispatch the email (no-op if email infra isn't configured).
-  if (r.otp_id) {
-    supabase.functions
-      .invoke("send-login-otp", { body: { otp_id: r.otp_id } })
-      .catch(() => {/* dev fallback uses devCode */});
+  // QA bypass — no email needed.
+  if (r.bypass) {
+    return { sent: true, bypass: true };
   }
 
-  return {
-    sent: true,
-    devCode: r.dev_code as string | undefined,
-    recipientEmail: r.recipient_email as string | undefined,
-  };
+  // Dispatch real email via Gmail edge function.
+  const plainCode = r.plain_code as string | undefined;
+  const recipient = r.recipient_email as string | undefined;
+  const recipientName = r.recipient_name as string | undefined;
+  if (plainCode && recipient) {
+    supabase.functions
+      .invoke("send-login-otp", { body: { to: recipient, code: plainCode, name: recipientName } })
+      .catch((e) => console.error("send-login-otp invoke failed", e));
+  }
+
+  return { sent: true, recipientEmail: recipient };
 }
 
 /** Step 2 — verify the 6-digit code and return the officer. */

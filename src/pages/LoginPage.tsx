@@ -59,15 +59,13 @@ export default function LoginPage() {
         return;
       }
       setStep("verify");
-      setResendIn(30);
-      if (res.devCode) {
-        // Email infra not yet configured — surface the code for development use.
-        toast.info(`Dev code: ${res.devCode}`, {
-          description: "Email delivery is not yet configured. Use this code to sign in.",
-          duration: 15000,
-        });
+      setResendIn(60);
+      if (res.bypass) {
+        toast.info("QA test account — use bypass code", { duration: 10000 });
       } else {
-        toast.success(`Code sent to ${res.recipientEmail || email}`);
+        toast.success(`Code sent to ${res.recipientEmail || email}`, {
+          description: "Check your inbox (and spam folder).",
+        });
       }
     } catch (e: any) {
       setError(e?.message || "Could not send code.");
