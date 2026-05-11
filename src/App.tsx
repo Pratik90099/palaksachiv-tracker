@@ -31,6 +31,7 @@ import RecordMinutesPage from "./pages/RecordMinutesPage";
 import DocumentAIPage from "./pages/DocumentAIPage";
 import InsightsPage from "./pages/InsightsPage";
 import AITelemetryPage from "./pages/AITelemetryPage";
+import AuditTrailPage from "./pages/AuditTrailPage";
 import AccessibilityPage from "./pages/static/AccessibilityPage";
 import PrivacyPage from "./pages/static/PrivacyPage";
 import TermsPage from "./pages/static/TermsPage";
