@@ -1,73 +1,52 @@
-## Goals
+## Goal
+Replace the Lovable AI Gateway with direct calls to Google's Gemini API (using your own API key) in both AI-powered edge functions: `process-document` and `generate-insights`.
 
-1. Note that you'll be wiring email delivery through your own external cloud provider — not Lovable's managed email infra — so I won't scaffold any Lovable email domain.
-2. Confirm email-based authentication is already active (the existing OTP login). No code changes needed for the auth flow itself.
-3. Seed 38 District Collector records into `officers` so they can sign in.
+## Security first (do this before I implement)
 
----
+You pasted the API key in chat, which means it should be considered leaked.
 
-## 1. Email delivery (external cloud)
+1. Go to https://aistudio.google.com/apikey
+2. Delete the key starting with `AIzaSyDCbPgAym...`
+3. Create a fresh key
+4. When I start implementation, I'll prompt you with a secure form to paste the **new** key — it gets stored as a backend secret named `GEMINI_API_KEY`, never written to the codebase, never shipped to the browser.
 
-Today, OTP emails go out via the `send-login-otp` edge function using the connected Gmail account. You said you'll plug in an external cloud-based email provider yourself.
+Do not paste the new key in chat.
 
-Action items:
+## What changes
 
-- I'll **leave** the current `send-login-otp` edge function and Gmail relay in place so login keeps working until you swap it.
-- I'll **add a short comment block** at the top of `send-login-otp/index.ts` documenting the swap-in point: replace the Gmail fetch call with your provider's API (SES, SendGrid via your account, Postmark, etc.), keeping the same input contract (`{ otp_id, code }`) and the same DB lookup so the email-relay abuse protection stays intact.
-- No domain config is touched in Lovable. No Lovable Email infra scaffolded.
+### 1. New backend secret
+- `GEMINI_API_KEY` — your Google AI Studio key, used only inside edge functions.
 
-If you later want me to wire a specific provider (you supply API key as a secret), tell me which one and I'll do that change.
+### 2. `supabase/functions/process-document/index.ts`
+- Replace the `fetch("https://ai.gateway.lovable.dev/v1/chat/completions", ...)` block with a direct call to Google's Generative Language API:
+  - Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+  - Convert the existing `messages: [{role:"system",...},{role:"user",...}]` payload into Gemini's native shape (`systemInstruction` + `contents`).
+  - Parse `candidates[0].content.parts[0].text` instead of `choices[0].message.content`.
+- Keep all surrounding logic untouched: auth check, input validation, mode routing, JSON shape validation, audit log, CORS, error handling.
+- Map Google error codes to the same user-facing messages already used for 429 (rate limit) and 402-equivalent (quota exhausted → `RESOURCE_EXHAUSTED`).
 
-## 2. Email-based authentication
+### 3. `supabase/functions/generate-insights/index.ts`
+- Same swap: direct Gemini call instead of gateway.
+- Tool-calling shape changes: convert the OpenAI-style `tools` + `tool_choice` block into Gemini's `tools: [{functionDeclarations: [...]}]` + `toolConfig: {functionCallingConfig: {mode:"ANY", allowedFunctionNames:["submit_insights"]}}`.
+- Read structured output from `candidates[0].content.parts[0].functionCall.args` instead of `tool_calls[0].function.arguments`.
+- Keep CSO-admin authorization, stats aggregation, and `ai_insights` insert exactly as-is.
 
-The portal already runs on **passwordless email OTP** — that is email-based authentication. Login flow:
+### 4. Model choice
+- Use `gemini-2.5-flash` (fast, cheap, supports function calling, generally available — `gemini-3-flash-preview` is a Lovable-gateway alias not available on the public Google API).
 
-```text
-Login page → enter email + role → request_login_otp RPC →
-send-login-otp edge fn emails 6-digit code →
-user enters code → verify_login_otp RPC → session created
-```
-
-Confirming nothing to change here. The QA bypass (`pratikbbavi@gmail.com` / `567890`) stays until you ask me to remove it before production.
-
-## 3. Seed District Collectors
-
-Insert 38 rows into `public.officers` with `role = 'district_collector'`, `is_active = true`, mapped to the correct `district_id`.
-
-District-name mapping (your list → DB name):
-
-- "Chhatrapati Sambhaji Nagar" → **Chhatrapati Sambhajinagar**
-- All others match exactly.
-
-Special cases:
-
-- **Palghar** collector  Dr. Indurani Jakhar) `role = 'district_collector'`
-- **Ahilyanagar** Dr. Pankaj Ashiya — Collector `role = 'district_collector'`. Same caveat.
-- **Mumbai Suburban** (Saurabh Katiyar) has no email in your sheet — using `collector.mumbaisuburb@maharashtra.gov.in` as you specified.
-
-Insert strategy:
-
-- Use a single SQL `INSERT ... SELECT` against `districts` for clean district_id resolution.
-- Skip rows whose email already exists in `officers` (idempotent — safe to re-run).
-- Set `designation = 'District Collector'` for all 
-- Store `phone` as provided.
-
-After insert, total expected: **36** new collector records (+0 if any duplicates already present).
-
-You'll be able to verify in **User Management** and they can log in immediately by selecting "District Collector" role on the login page once email delivery is wired through your provider.
-
----
-
-## Files / changes
-
-- `supabase/functions/send-login-otp/index.ts` — small comment block documenting the external-provider swap point. No behavior change.
-- One **data insert** (not a schema migration) into `public.officers` with the 38 collectors.
-- No frontend changes.
-- No new tables, RLS, or migrations.
+## What stays the same
+- All UI (Document AI page, Insights page).
+- Auth, RLS, validation, audit logging.
+- The `LOVABLE_API_KEY` secret stays (it's auto-managed and harmless to leave). After this change, no edge function reads it.
+- Lovable AI Gateway is no longer used; billing for these features goes to your Google Cloud / AI Studio account directly.
 
 ## Out of scope
+- Streaming responses (current functions are non-streaming; no UI change requested).
+- Switching the OTP/email functions — they don't use AI.
+- Any frontend changes.
 
-- Wiring a specific external email provider (waiting on your choice + API key).
-- Removing the QA bypass account.
-- Any change to the OTP flow itself.
-- Collectors need not have visit report option it is only for guardian secretary
+## Verification after build
+- Deploy both functions, then from the app:
+  - Document AI page → upload a small text doc → confirm summary returns.
+  - AI Insights page → "Generate Insights" → confirm the four-section card renders.
+- Check edge function logs for either function if anything fails.
