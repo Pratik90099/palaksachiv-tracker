@@ -46,9 +46,20 @@ export default function InsightsPage() {
       const { data, error } = await supabase.functions.invoke("generate-insights", {
         headers: user?.email ? { "x-cso-email": user.email } : undefined,
       });
-      if (error) throw error;
+      if (error) {
+        let msg = error.message || "Edge function error";
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === "function") {
+          try {
+            const body = await ctx.json();
+            if (body?.error) msg = body.error;
+          } catch { /* ignore */ }
+        }
+        throw new Error(msg);
+      }
       if (data?.error) throw new Error(data.error);
-      toast.success("Insights generated");
+      const suffix = data?.provider === "lovable-gateway" ? " (via fallback)" : "";
+      toast.success(`Insights generated${suffix}`);
       await loadLatest();
     } catch (err: any) {
       toast.error(err.message || "Failed to generate insights");

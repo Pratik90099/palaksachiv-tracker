@@ -88,57 +88,116 @@ Deno.serve(async (req) => {
     const systemPrompt = `You are an executive policy analyst for the Government of Maharashtra Chief Secretary's Office. Generate a brief, actionable insight summary based on the provided governance metrics. Focus on patterns, risks, and concrete next steps. Be concise and specific.`;
     const userPrompt = `Analyze these state governance metrics and produce structured insights:\n\n${JSON.stringify(stats, null, 2)}`;
 
-    const aiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          tools: [{
-            functionDeclarations: [{
-              name: "submit_insights",
-              description: "Submit structured governance insights",
-              parameters: {
-                type: "object",
-                properties: {
-                  headline: { type: "string", description: "One-line executive summary" },
-                  key_insights: { type: "array", items: { type: "string" }, description: "3-5 key observations" },
-                  risks: { type: "array", items: { type: "string" }, description: "2-4 critical risks" },
-                  recommendations: { type: "array", items: { type: "string" }, description: "3-5 actionable next steps" },
-                },
-                required: ["headline", "key_insights", "risks", "recommendations"],
-              },
-            }],
-          }],
-          toolConfig: {
-            functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["submit_insights"] },
-          },
-        }),
-      }
-    );
+    const insightsSchema = {
+      name: "submit_insights",
+      description: "Submit structured governance insights",
+      parameters: {
+        type: "object",
+        properties: {
+          headline: { type: "string" },
+          key_insights: { type: "array", items: { type: "string" } },
+          risks: { type: "array", items: { type: "string" } },
+          recommendations: { type: "array", items: { type: "string" } },
+        },
+        required: ["headline", "key_insights", "risks", "recommendations"],
+      },
+    };
 
-    if (aiRes.status === 429) return jsonResponse({ error: "Rate limit exceeded. Try again shortly." }, 429);
-    if (!aiRes.ok) {
-      const t = await aiRes.text();
-      if (aiRes.status === 403 && /RESOURCE_EXHAUSTED|quota/i.test(t)) {
-        return jsonResponse({ error: "AI quota exhausted. Please top up." }, 402);
+    // ---- Try Gemini direct, fall back to Lovable AI Gateway on quota/5xx ----
+    const t0 = Date.now();
+    let payload: any = null;
+    let provider = "gemini-direct";
+    let lastError = "";
+
+    try {
+      const aiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            tools: [{ functionDeclarations: [insightsSchema] }],
+            toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["submit_insights"] } },
+          }),
+        }
+      );
+
+      if (aiRes.ok) {
+        const aiJson = await aiRes.json();
+        const parts = aiJson.candidates?.[0]?.content?.parts || [];
+        payload = parts.find((p: any) => p.functionCall)?.functionCall?.args || null;
+        if (!payload) lastError = "Gemini returned no structured response";
+      } else {
+        const t = await aiRes.text();
+        lastError = `Gemini ${aiRes.status}: ${t.slice(0, 300)}`;
+        console.warn("[generate-insights] gemini failed", aiRes.status, t.slice(0, 300));
       }
-      console.error("Gemini API error", aiRes.status, t);
-      return jsonResponse({ error: "AI service unavailable" }, 500);
+    } catch (err) {
+      lastError = `Gemini network: ${err instanceof Error ? err.message : String(err)}`;
+      console.warn("[generate-insights]", lastError);
     }
 
-    const aiJson = await aiRes.json();
-    const parts = aiJson.candidates?.[0]?.content?.parts || [];
-    const fnCall = parts.find((p: any) => p.functionCall)?.functionCall;
-    if (!fnCall?.args) throw new Error("No structured response from AI");
-    const payload = fnCall.args;
+    // Fallback: Lovable AI Gateway (uses LOVABLE_API_KEY auto-managed)
+    if (!payload) {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (LOVABLE_API_KEY) {
+        provider = "lovable-gateway";
+        try {
+          const fbRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              tools: [{ type: "function", function: insightsSchema }],
+              tool_choice: { type: "function", function: { name: "submit_insights" } },
+            }),
+          });
+          if (fbRes.ok) {
+            const fbJson = await fbRes.json();
+            const argsStr = fbJson.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+            if (argsStr) payload = JSON.parse(argsStr);
+            else lastError = "Fallback returned no tool call";
+          } else {
+            const t = await fbRes.text();
+            lastError = `Fallback ${fbRes.status}: ${t.slice(0, 300)}`;
+            console.error("[generate-insights] fallback failed", fbRes.status, t.slice(0, 300));
+          }
+        } catch (err) {
+          lastError = `Fallback network: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      }
+    }
 
-    // Persist
+    const latencyMs = Date.now() - t0;
+
+    if (!payload) {
+      // Best-guess status mapping for the UI
+      const status = /quota|RESOURCE_EXHAUSTED/i.test(lastError) ? 402
+                   : /429/.test(lastError) ? 429
+                   : 502;
+      return jsonResponse({ error: `AI generation failed: ${lastError}`, latencyMs }, status);
+    }
+
+    // Persist insight + telemetry log (best-effort)
     await admin.from("ai_insights").insert({ payload, generated_by: callerEmail });
+    admin.from("ai_call_logs").insert({
+      function_name: "generate-insights",
+      provider,
+      status: 200,
+      latency_ms: latencyMs,
+      caller_email: callerEmail,
+    }).then(() => {}, () => {});
 
-    return new Response(JSON.stringify({ payload, stats }), {
+    return new Response(JSON.stringify({ payload, stats, provider, latencyMs }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

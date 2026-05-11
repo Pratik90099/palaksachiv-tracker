@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { SiteFooter } from "./SiteFooter";
 import { useAuth } from "@/lib/auth-context";
 import { Bell, Search, X, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -177,6 +178,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <main className="flex-1 overflow-auto bg-background">
             {children}
           </main>
+          <SiteFooter />
         </div>
       </div>
     </SidebarProvider>
