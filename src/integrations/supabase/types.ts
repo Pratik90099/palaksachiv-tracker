@@ -155,6 +155,13 @@ export type Database = {
             referencedRelation: "officers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "external_identities_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers_directory"
+            referencedColumns: ["id"]
+          },
         ]
       }
       guardian_secretaries: {
@@ -333,6 +340,7 @@ export type Database = {
           is_read: boolean
           link: string | null
           message: string | null
+          recipient_officer_id: string | null
           related_project_id: string | null
           related_task_id: string | null
           title: string
@@ -344,6 +352,7 @@ export type Database = {
           is_read?: boolean
           link?: string | null
           message?: string | null
+          recipient_officer_id?: string | null
           related_project_id?: string | null
           related_task_id?: string | null
           title: string
@@ -355,6 +364,7 @@ export type Database = {
           is_read?: boolean
           link?: string | null
           message?: string | null
+          recipient_officer_id?: string | null
           related_project_id?: string | null
           related_task_id?: string | null
           title?: string
@@ -638,7 +648,32 @@ export type Database = {
             referencedRelation: "officers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "projects_assigned_officer_id_fkey"
+            columns: ["assigned_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers_directory"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      session_officer_map: {
+        Row: {
+          auth_uid: string
+          created_at: string
+          officer_id: string
+        }
+        Insert: {
+          auth_uid: string
+          created_at?: string
+          officer_id: string
+        }
+        Update: {
+          auth_uid?: string
+          created_at?: string
+          officer_id?: string
+        }
+        Relationships: []
       }
       task_departments: {
         Row: {
@@ -767,6 +802,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_assigned_officer_id_fkey"
+            columns: ["assigned_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers_directory"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -848,17 +890,108 @@ export type Database = {
             referencedRelation: "guardian_secretaries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "visits_gs_id_fkey"
+            columns: ["gs_id"]
+            isOneToOne: false
+            referencedRelation: "guardian_secretaries_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      guardian_secretaries_public: {
+        Row: {
+          designation: string | null
+          district_id: string | null
+          id: string | null
+          name: string | null
+        }
+        Insert: {
+          designation?: string | null
+          district_id?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Update: {
+          designation?: string | null
+          district_id?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardian_secretaries_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      officers_directory: {
+        Row: {
+          department_id: string | null
+          designation: string | null
+          district_id: string | null
+          id: string | null
+          is_active: boolean | null
+          is_cso_admin: boolean | null
+          is_palak_sachiv: boolean | null
+          name: string | null
+          role: string | null
+        }
+        Insert: {
+          department_id?: string | null
+          designation?: string | null
+          district_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_cso_admin?: boolean | null
+          is_palak_sachiv?: boolean | null
+          name?: string | null
+          role?: string | null
+        }
+        Update: {
+          department_id?: string | null
+          designation?: string | null
+          district_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_cso_admin?: boolean | null
+          is_palak_sachiv?: boolean | null
+          name?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "officers_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "officers_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      bind_session_officer: {
+        Args: { _officer_id: string }
+        Returns: undefined
+      }
       consume_pending_otp_for_dispatch: {
         Args: { _otp_id: string }
         Returns: Json
       }
+      current_officer_id: { Args: never; Returns: string }
       find_login_officer: {
         Args: { _email: string; _role: string }
         Returns: {
