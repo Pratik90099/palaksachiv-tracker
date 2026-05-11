@@ -38,6 +38,11 @@ export default function VisitsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     district_id: "",
     visit_date: "",
@@ -58,16 +63,64 @@ export default function VisitsPage() {
 
   const visibleVisits = filterVisits(visits || []);
 
+  const addPhotos = (files: FileList | null) => {
+    if (!files) return;
+    const accepted: File[] = [];
+    Array.from(files).forEach((f) => {
+      if (!PHOTO_TYPES.includes(f.type)) { toast.error(`${f.name}: only JPEG/PNG`); return; }
+      if (f.size > PHOTO_MAX) { toast.error(`${f.name}: exceeds 5 MB`); return; }
+      accepted.push(f);
+    });
+    setPhotoFiles((prev) => [...prev, ...accepted].slice(0, 20));
+  };
+  const addDocs = (files: FileList | null) => {
+    if (!files) return;
+    const accepted: File[] = [];
+    Array.from(files).forEach((f) => {
+      if (!DOC_TYPES.includes(f.type)) { toast.error(`${f.name}: only PDF/DOCX/XLSX`); return; }
+      if (f.size > DOC_MAX) { toast.error(`${f.name}: exceeds 10 MB`); return; }
+      accepted.push(f);
+    });
+    setDocFiles((prev) => [...prev, ...accepted].slice(0, 10));
+  };
+
   const handleSubmit = async () => {
     if (!form.district_id) { toast.error("Select a district"); return; }
     if (!form.visit_date) { toast.error("Enter visit date"); return; }
+    setUploading(true);
     try {
-      await createVisit.mutateAsync(form);
+      const created = await createVisit.mutateAsync(form);
+      // Upload attachments after the visit row exists
+      const all: { f: File; kind: "photo" | "document" }[] = [
+        ...photoFiles.map((f) => ({ f, kind: "photo" as const })),
+        ...docFiles.map((f) => ({ f, kind: "document" as const })),
+      ];
+      for (const { f, kind } of all) {
+        const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `visits/${created.id}/${kind === "photo" ? "photos" : "docs"}/${crypto.randomUUID()}-${safeName}`;
+        const { error: upErr } = await supabase.storage.from("documents").upload(path, f, {
+          contentType: f.type,
+          upsert: false,
+        });
+        if (upErr) { toast.error(`${f.name}: ${upErr.message}`); continue; }
+        await supabase.from("visit_attachments").insert({
+          visit_id: created.id,
+          kind,
+          storage_path: path,
+          file_name: f.name,
+          file_size: f.size,
+          mime_type: f.type,
+          uploaded_by: currentOfficerId || null,
+        });
+      }
       toast.success("Visit logged successfully");
       setShowForm(false);
+      setPhotoFiles([]); setDocFiles([]);
       setForm({ district_id: "", visit_date: "", quarter: "Q4 2024-25", status: "completed", rating: "satisfactory", observations: "", issues_logged: 0 });
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
