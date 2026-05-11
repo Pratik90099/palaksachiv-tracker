@@ -722,6 +722,24 @@ export type Database = {
         }
         Relationships: []
       }
+      site_visits: {
+        Row: {
+          id: string
+          session_hash: string | null
+          visited_at: string
+        }
+        Insert: {
+          id?: string
+          session_hash?: string | null
+          visited_at?: string
+        }
+        Update: {
+          id?: string
+          session_hash?: string | null
+          visited_at?: string
+        }
+        Relationships: []
+      }
       task_departments: {
         Row: {
           department_id: string
@@ -1137,6 +1155,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_visitor_counts: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
