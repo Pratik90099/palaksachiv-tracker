@@ -159,6 +159,13 @@ export type Database = {
             foreignKeyName: "external_identities_officer_id_fkey"
             columns: ["officer_id"]
             isOneToOne: false
+            referencedRelation: "officers_admin"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_identities_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
             referencedRelation: "officers_directory"
             referencedColumns: ["id"]
           },
@@ -652,6 +659,13 @@ export type Database = {
             foreignKeyName: "projects_assigned_officer_id_fkey"
             columns: ["assigned_officer_id"]
             isOneToOne: false
+            referencedRelation: "officers_admin"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_assigned_officer_id_fkey"
+            columns: ["assigned_officer_id"]
+            isOneToOne: false
             referencedRelation: "officers_directory"
             referencedColumns: ["id"]
           },
@@ -805,6 +819,13 @@ export type Database = {
             foreignKeyName: "tasks_assigned_officer_id_fkey"
             columns: ["assigned_officer_id"]
             isOneToOne: false
+            referencedRelation: "officers_admin"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_assigned_officer_id_fkey"
+            columns: ["assigned_officer_id"]
+            isOneToOne: false
             referencedRelation: "officers_directory"
             referencedColumns: ["id"]
           },
@@ -923,6 +944,72 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "guardian_secretaries_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      officers_admin: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          designation: string | null
+          district_id: string | null
+          email: string | null
+          id: string | null
+          is_active: boolean | null
+          is_cso_admin: boolean | null
+          is_palak_sachiv: boolean | null
+          name: string | null
+          parichay_uid: string | null
+          phone: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          designation?: string | null
+          district_id?: string | null
+          email?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_cso_admin?: boolean | null
+          is_palak_sachiv?: boolean | null
+          name?: string | null
+          parichay_uid?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          designation?: string | null
+          district_id?: string | null
+          email?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_cso_admin?: boolean | null
+          is_palak_sachiv?: boolean | null
+          name?: string | null
+          parichay_uid?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "officers_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "officers_district_id_fkey"
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "districts"
