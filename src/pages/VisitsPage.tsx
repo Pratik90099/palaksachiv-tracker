@@ -215,21 +215,67 @@ export default function VisitsPage() {
               <Camera className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium text-foreground">Visit Photographs</p>
               <p className="text-[10px] text-muted-foreground">Min 2, Max 20 files • JPEG/PNG • 5 MB each</p>
-              <Button variant="outline" size="sm" className="mt-2 text-xs">Upload Photos</Button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                multiple
+                className="hidden"
+                onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }}
+              />
+              <Button
+                variant="outline" size="sm" className="mt-2 text-xs"
+                onClick={() => photoInputRef.current?.click()}
+              >Upload Photos</Button>
+              {photoFiles.length > 0 && (
+                <ul className="mt-2 text-left text-[11px] space-y-1">
+                  {photoFiles.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
+                      <span className="truncate">{f.name}</span>
+                      <button onClick={() => setPhotoFiles((prev) => prev.filter((_, j) => j !== i))} className="text-destructive hover:opacity-80">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="p-4 border-2 border-dashed border-border rounded-lg text-center">
               <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium text-foreground">Supporting Documents</p>
               <p className="text-[10px] text-muted-foreground">PDF/DOCX/XLSX • Max 10 files • 10 MB each</p>
-              <Button variant="outline" size="sm" className="mt-2 text-xs">Upload Documents</Button>
+              <input
+                ref={docInputRef}
+                type="file"
+                accept=".pdf,.docx,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                multiple
+                className="hidden"
+                onChange={(e) => { addDocs(e.target.files); e.target.value = ""; }}
+              />
+              <Button
+                variant="outline" size="sm" className="mt-2 text-xs"
+                onClick={() => docInputRef.current?.click()}
+              >Upload Documents</Button>
+              {docFiles.length > 0 && (
+                <ul className="mt-2 text-left text-[11px] space-y-1">
+                  {docFiles.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
+                      <span className="truncate">{f.name}</span>
+                      <button onClick={() => setDocFiles((prev) => prev.filter((_, j) => j !== i))} className="text-destructive hover:opacity-80">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button className="bg-primary text-primary-foreground" onClick={handleSubmit} disabled={createVisit.isPending}>
-              Submit Visit Report
+            <Button className="bg-primary text-primary-foreground" onClick={handleSubmit} disabled={createVisit.isPending || uploading}>
+              {uploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</>) : "Submit Visit Report"}
             </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowForm(false)} disabled={uploading}>Cancel</Button>
           </div>
         </motion.div>
       )}
