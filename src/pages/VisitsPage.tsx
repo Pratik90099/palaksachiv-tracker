@@ -370,6 +370,27 @@ function VisitDetailSheet({
   const addComment = useAddVisitComment();
   const [text, setText] = useState("");
   const [actionTaken, setActionTaken] = useState(true);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!visit?.id) { setAttachments([]); setSignedUrls({}); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("visit_attachments")
+        .select("*")
+        .eq("visit_id", visit.id)
+        .order("created_at", { ascending: true });
+      const list = data || [];
+      setAttachments(list);
+      const urls: Record<string, string> = {};
+      for (const a of list) {
+        const { data: s } = await supabase.storage.from("documents").createSignedUrl(a.storage_path, 600);
+        if (s?.signedUrl) urls[a.id] = s.signedUrl;
+      }
+      setSignedUrls(urls);
+    })();
+  }, [visit?.id]);
 
   const handlePost = async () => {
     if (!visit) return;
