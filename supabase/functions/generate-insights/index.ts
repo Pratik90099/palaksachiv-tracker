@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     let provider = "gemini-direct";
     let lastError = "";
 
-    try {
+    if (GEMINI_API_KEY) try {
       const aiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
