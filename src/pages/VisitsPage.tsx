@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   useVisits,
   useCreateVisit,
+  useUpdateVisit,
+  useDeleteVisit,
+  useDeleteVisitAttachment,
   useDistricts,
   useVisitComments,
   useAddVisitComment,
@@ -9,14 +12,22 @@ import {
 import { useRoleFilter } from "@/hooks/use-role-filter";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Plus, Download, MapPin, FileText, Camera, MessageSquare, ShieldCheck, X, Loader2, Image as ImageIcon } from "lucide-react";
+import {
+  Calendar, Plus, Download, MapPin, FileText, Camera, MessageSquare, ShieldCheck,
+  X, Loader2, Image as ImageIcon, RotateCw, Trash2, Pencil, Replace as ReplaceIcon, CheckCircle2, AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -29,21 +40,73 @@ const DOC_TYPES = [
 const PHOTO_MAX = 5 * 1024 * 1024;
 const DOC_MAX = 10 * 1024 * 1024;
 
+type QueueItem = {
+  id: string;
+  file: File;
+  kind: "photo" | "document";
+  progress: number;
+  status: "queued" | "uploading" | "done" | "error";
+  error?: string;
+};
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+/**
+ * Upload one file with XHR progress, by first asking Supabase Storage for a
+ * signed upload URL, then PUT-ing to it directly so we can attach onprogress.
+ */
+async function uploadWithProgress(
+  path: string,
+  file: File,
+  onProgress: (pct: number) => void
+): Promise<void> {
+  const { data, error } = await supabase.storage
+    .from("documents")
+    .createSignedUploadUrl(path);
+  if (error || !data) throw error || new Error("Could not create upload URL");
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", `${SUPABASE_URL}/storage/v1${data.signedUrl.startsWith("/") ? "" : "/"}${data.signedUrl}`.replace(/\/{2,}/g, "/").replace(":/", "://"));
+    // The signedUrl returned from supabase-js already includes the path + token;
+    // we PUT to /storage/v1/<signedUrl>. supabase-js v2 returns signedUrl beginning
+    // with "object/upload/sign/...". Build a clean absolute URL:
+    const absolute = `${SUPABASE_URL}/storage/v1/${data.signedUrl.replace(/^\/+/, "")}`;
+    xhr.abort();
+    const x = new XMLHttpRequest();
+    x.open("PUT", absolute);
+    x.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    x.setRequestHeader("x-upsert", "false");
+    x.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    x.onload = () => {
+      if (x.status >= 200 && x.status < 300) resolve();
+      else reject(new Error(`Upload failed (${x.status}): ${x.responseText || x.statusText}`));
+    };
+    x.onerror = () => reject(new Error("Network error during upload"));
+    x.send(file);
+  });
+}
+
 export default function VisitsPage() {
   const { user } = useAuth();
   const { data: visits, isLoading } = useVisits();
   const { data: districts } = useDistricts();
   const { filterVisits, currentOfficerId, role, userDistrict } = useRoleFilter();
   const createVisit = useCreateVisit();
+  const updateVisit = useUpdateVisit();
+  const deleteVisit = useDeleteVisit();
 
   const [showForm, setShowForm] = useState(false);
+  const [editingVisit, setEditingVisit] = useState<any>(null);
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
-  const [docFiles, setDocFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({
+  const emptyForm = {
     district_id: "",
     visit_date: "",
     quarter: "Q4 2024-25",
@@ -51,7 +114,8 @@ export default function VisitsPage() {
     rating: "satisfactory",
     observations: "",
     issues_logged: 0,
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   const canLogVisit = role === "guardian_secretary" || role === "system_admin" || role === "chief_secretary";
   const canComment =
@@ -63,65 +127,114 @@ export default function VisitsPage() {
 
   const visibleVisits = filterVisits(visits || []);
 
+  const canEditVisit = useCallback(
+    (v: any) =>
+      role === "system_admin" ||
+      role === "chief_secretary" ||
+      role === "cmo" ||
+      (role === "guardian_secretary" && v?.gs_id && v.gs_id === currentOfficerId),
+    [role, currentOfficerId]
+  );
+
   const addPhotos = (files: FileList | null) => {
     if (!files) return;
-    const accepted: File[] = [];
+    const accepted: QueueItem[] = [];
     Array.from(files).forEach((f) => {
       if (!PHOTO_TYPES.includes(f.type)) { toast.error(`${f.name}: only JPEG/PNG`); return; }
       if (f.size > PHOTO_MAX) { toast.error(`${f.name}: exceeds 5 MB`); return; }
-      accepted.push(f);
+      accepted.push({ id: crypto.randomUUID(), file: f, kind: "photo", progress: 0, status: "queued" });
     });
-    setPhotoFiles((prev) => [...prev, ...accepted].slice(0, 20));
+    setQueue((q) => [...q, ...accepted].slice(0, 30));
   };
   const addDocs = (files: FileList | null) => {
     if (!files) return;
-    const accepted: File[] = [];
+    const accepted: QueueItem[] = [];
     Array.from(files).forEach((f) => {
       if (!DOC_TYPES.includes(f.type)) { toast.error(`${f.name}: only PDF/DOCX/XLSX`); return; }
       if (f.size > DOC_MAX) { toast.error(`${f.name}: exceeds 10 MB`); return; }
-      accepted.push(f);
+      accepted.push({ id: crypto.randomUUID(), file: f, kind: "document", progress: 0, status: "queued" });
     });
-    setDocFiles((prev) => [...prev, ...accepted].slice(0, 10));
+    setQueue((q) => [...q, ...accepted].slice(0, 30));
+  };
+
+  const updateItem = (id: string, patch: Partial<QueueItem>) =>
+    setQueue((q) => q.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+
+  const uploadOne = async (visitId: string, item: QueueItem) => {
+    updateItem(item.id, { status: "uploading", progress: 0, error: undefined });
+    try {
+      const safe = item.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `visits/${visitId}/${item.kind === "photo" ? "photos" : "docs"}/${crypto.randomUUID()}-${safe}`;
+      await uploadWithProgress(path, item.file, (pct) => updateItem(item.id, { progress: pct }));
+      const { error: dbErr } = await supabase.from("visit_attachments").insert({
+        visit_id: visitId,
+        kind: item.kind,
+        storage_path: path,
+        file_name: item.file.name,
+        file_size: item.file.size,
+        mime_type: item.file.type,
+        uploaded_by: currentOfficerId || null,
+      });
+      if (dbErr) throw dbErr;
+      updateItem(item.id, { status: "done", progress: 100 });
+    } catch (err: any) {
+      updateItem(item.id, { status: "error", error: err?.message || "Upload failed" });
+    }
   };
 
   const handleSubmit = async () => {
     if (!form.district_id) { toast.error("Select a district"); return; }
     if (!form.visit_date) { toast.error("Enter visit date"); return; }
-    setUploading(true);
+    setSubmitting(true);
     try {
-      const created = await createVisit.mutateAsync(form);
-      // Upload attachments after the visit row exists
-      const all: { f: File; kind: "photo" | "document" }[] = [
-        ...photoFiles.map((f) => ({ f, kind: "photo" as const })),
-        ...docFiles.map((f) => ({ f, kind: "document" as const })),
-      ];
-      for (const { f, kind } of all) {
-        const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `visits/${created.id}/${kind === "photo" ? "photos" : "docs"}/${crypto.randomUUID()}-${safeName}`;
-        const { error: upErr } = await supabase.storage.from("documents").upload(path, f, {
-          contentType: f.type,
-          upsert: false,
-        });
-        if (upErr) { toast.error(`${f.name}: ${upErr.message}`); continue; }
-        await supabase.from("visit_attachments").insert({
-          visit_id: created.id,
-          kind,
-          storage_path: path,
-          file_name: f.name,
-          file_size: f.size,
-          mime_type: f.type,
-          uploaded_by: currentOfficerId || null,
-        });
+      let visitId: string | null = null;
+      if (editingVisit) {
+        await updateVisit.mutateAsync({ id: editingVisit.id, ...form });
+        visitId = editingVisit.id;
+      } else {
+        const created = await createVisit.mutateAsync({ ...form, gs_id: currentOfficerId || undefined } as any);
+        visitId = created.id;
       }
-      toast.success("Visit logged successfully");
-      setShowForm(false);
-      setPhotoFiles([]); setDocFiles([]);
-      setForm({ district_id: "", visit_date: "", quarter: "Q4 2024-25", status: "completed", rating: "satisfactory", observations: "", issues_logged: 0 });
+      // Upload only queued/error items
+      const pending = queue.filter((q) => q.status === "queued" || q.status === "error");
+      for (const it of pending) await uploadOne(visitId!, it);
+      const failed = queue.some((q) => q.status === "error");
+      if (failed) {
+        toast.warning("Visit saved. Some files failed — use Retry to upload them again.");
+      } else {
+        toast.success(editingVisit ? "Visit updated" : "Visit logged successfully");
+        setShowForm(false);
+        setEditingVisit(null);
+        setQueue([]);
+        setForm(emptyForm);
+      }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || "Failed to save visit");
     } finally {
-      setUploading(false);
+      setSubmitting(false);
     }
+  };
+
+  const startEdit = (v: any) => {
+    setEditingVisit(v);
+    setForm({
+      district_id: v.district_id || "",
+      visit_date: v.visit_date || "",
+      quarter: v.quarter || "Q4 2024-25",
+      status: v.status || "completed",
+      rating: v.rating || "satisfactory",
+      observations: v.observations || "",
+      issues_logged: v.issues_logged || 0,
+    });
+    setQueue([]);
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingVisit(null);
+    setQueue([]);
+    setForm(emptyForm);
   };
 
   return (
@@ -140,8 +253,8 @@ export default function VisitsPage() {
             <Download className="h-4 w-4 mr-1" /> Export
           </Button>
           {canLogVisit && (
-            <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => setShowForm(!showForm)}>
-              <Plus className="h-4 w-4 mr-1" /> Log New Visit
+            <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { if (showForm) cancelForm(); else setShowForm(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> {showForm ? "Close" : "Log New Visit"}
             </Button>
           )}
         </div>
@@ -149,11 +262,11 @@ export default function VisitsPage() {
 
       {showForm && canLogVisit && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="gov-card-elevated space-y-4">
-          <h3 className="gov-section-title">New Visit Report</h3>
+          <h3 className="gov-section-title">{editingVisit ? "Edit Visit Report" : "New Visit Report"}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">District *</label>
-              <Select value={form.district_id} onValueChange={(v) => setForm({ ...form, district_id: v })}>
+              <Select value={form.district_id} onValueChange={(v) => setForm({ ...form, district_id: v })} disabled={!!editingVisit}>
                 <SelectTrigger className="text-sm"><SelectValue placeholder="Select district" /></SelectTrigger>
                 <SelectContent>
                   {districts?.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
@@ -214,7 +327,7 @@ export default function VisitsPage() {
             <div className="p-4 border-2 border-dashed border-border rounded-lg text-center">
               <Camera className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium text-foreground">Visit Photographs</p>
-              <p className="text-[10px] text-muted-foreground">Min 2, Max 20 files • JPEG/PNG • 5 MB each</p>
+              <p className="text-[10px] text-muted-foreground">JPEG/PNG • 5 MB each</p>
               <input
                 ref={photoInputRef}
                 type="file"
@@ -223,27 +336,14 @@ export default function VisitsPage() {
                 className="hidden"
                 onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }}
               />
-              <Button
-                variant="outline" size="sm" className="mt-2 text-xs"
-                onClick={() => photoInputRef.current?.click()}
-              >Upload Photos</Button>
-              {photoFiles.length > 0 && (
-                <ul className="mt-2 text-left text-[11px] space-y-1">
-                  {photoFiles.map((f, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
-                      <span className="truncate">{f.name}</span>
-                      <button onClick={() => setPhotoFiles((prev) => prev.filter((_, j) => j !== i))} className="text-destructive hover:opacity-80">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <Button variant="outline" size="sm" className="mt-2 text-xs" onClick={() => photoInputRef.current?.click()}>
+                Add Photos
+              </Button>
             </div>
             <div className="p-4 border-2 border-dashed border-border rounded-lg text-center">
               <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium text-foreground">Supporting Documents</p>
-              <p className="text-[10px] text-muted-foreground">PDF/DOCX/XLSX • Max 10 files • 10 MB each</p>
+              <p className="text-[10px] text-muted-foreground">PDF/DOCX/XLSX • 10 MB each</p>
               <input
                 ref={docInputRef}
                 type="file"
@@ -252,30 +352,53 @@ export default function VisitsPage() {
                 className="hidden"
                 onChange={(e) => { addDocs(e.target.files); e.target.value = ""; }}
               />
-              <Button
-                variant="outline" size="sm" className="mt-2 text-xs"
-                onClick={() => docInputRef.current?.click()}
-              >Upload Documents</Button>
-              {docFiles.length > 0 && (
-                <ul className="mt-2 text-left text-[11px] space-y-1">
-                  {docFiles.map((f, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
-                      <span className="truncate">{f.name}</span>
-                      <button onClick={() => setDocFiles((prev) => prev.filter((_, j) => j !== i))} className="text-destructive hover:opacity-80">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <Button variant="outline" size="sm" className="mt-2 text-xs" onClick={() => docInputRef.current?.click()}>
+                Add Documents
+              </Button>
             </div>
           </div>
 
+          {queue.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Upload queue ({queue.length})</div>
+              {queue.map((it) => (
+                <div key={it.id} className="gov-card p-2 text-xs space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 truncate">
+                      {it.kind === "photo" ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+                      <span className="truncate text-foreground">{it.file.name}</span>
+                      <span className="text-muted-foreground">({(it.file.size / 1024).toFixed(0)} KB)</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {it.status === "done" && <CheckCircle2 className="h-3.5 w-3.5 text-gov-success" />}
+                      {it.status === "error" && <AlertCircle className="h-3.5 w-3.5 text-destructive" />}
+                      {it.status === "uploading" && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
+                      {it.status === "error" && (
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => editingVisit ? uploadOne(editingVisit.id, it) : updateItem(it.id, { status: "queued", error: undefined })}>
+                          <RotateCw className="h-3 w-3 mr-1" /> Retry
+                        </Button>
+                      )}
+                      {it.status !== "uploading" && (
+                        <button onClick={() => setQueue((q) => q.filter((x) => x.id !== it.id))} className="text-destructive hover:opacity-80">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </span>
+                  </div>
+                  {(it.status === "uploading" || it.status === "done") && (
+                    <Progress value={it.progress} className="h-1" />
+                  )}
+                  {it.error && <p className="text-destructive text-[11px]">{it.error}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-2 pt-2">
-            <Button className="bg-primary text-primary-foreground" onClick={handleSubmit} disabled={createVisit.isPending || uploading}>
-              {uploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</>) : "Submit Visit Report"}
+            <Button className="bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>) : (editingVisit ? "Save Changes" : "Submit Visit Report")}
             </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)} disabled={uploading}>Cancel</Button>
+            <Button variant="outline" onClick={cancelForm} disabled={submitting}>Cancel</Button>
           </div>
         </motion.div>
       )}
@@ -293,7 +416,7 @@ export default function VisitsPage() {
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-left px-4 py-3">Issues</th>
                 <th className="text-left px-4 py-3">Rating</th>
-                <th className="text-left px-4 py-3">Action</th>
+                <th className="text-right px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -303,15 +426,16 @@ export default function VisitsPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  className="hover:bg-secondary/30 transition-colors cursor-pointer"
-                  onClick={() => setSelectedVisit(visit)}
+                  className="hover:bg-secondary/30 transition-colors"
                 >
-                  <td className="px-4 py-3 text-sm text-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-muted-foreground" /> {visit.districts?.name || "—"}
+                  <td className="px-4 py-3 text-sm text-foreground cursor-pointer" onClick={() => setSelectedVisit(visit)}>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-muted-foreground" /> {visit.districts?.name || "—"}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{visit.visit_date || "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{visit.quarter}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm text-muted-foreground cursor-pointer" onClick={() => setSelectedVisit(visit)}>{visit.visit_date || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground cursor-pointer" onClick={() => setSelectedVisit(visit)}>{visit.quarter}</td>
+                  <td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedVisit(visit)}>
                     <span className={`gov-badge ${
                       visit.status === "completed" ? "bg-gov-success-light text-gov-success" :
                       visit.status === "scheduled" ? "bg-gov-info-light text-gov-info" :
@@ -320,8 +444,8 @@ export default function VisitsPage() {
                       {visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-foreground">{visit.issues_logged}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm font-semibold text-foreground cursor-pointer" onClick={() => setSelectedVisit(visit)}>{visit.issues_logged}</td>
+                  <td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedVisit(visit)}>
                     <span className={`gov-badge ${
                       visit.rating === "satisfactory" ? "bg-gov-success-light text-gov-success" :
                       visit.rating === "needs_improvement" ? "bg-gov-warning-light text-gov-warning" :
@@ -330,8 +454,22 @@ export default function VisitsPage() {
                       {(visit.rating || "").split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-primary font-medium">
-                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> View / Comment</span>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex items-center gap-1">
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setSelectedVisit(visit)}>
+                        <MessageSquare className="h-3 w-3 mr-1" /> Open
+                      </Button>
+                      {canEditVisit(visit) && (
+                        <>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => startEdit(visit)} title="Edit visit">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => setConfirmDelete(visit)} title="Delete visit">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </motion.tr>
               ))}
@@ -350,13 +488,47 @@ export default function VisitsPage() {
         currentOfficerId={currentOfficerId}
         currentRole={user?.role}
         userName={user?.name}
+        canManageVisit={selectedVisit ? canEditVisit(selectedVisit) : false}
+        onEdit={(v) => { setSelectedVisit(null); startEdit(v); }}
+        onDelete={(v) => { setSelectedVisit(null); setConfirmDelete(v); }}
       />
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this visit report?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the visit, its comments and all attached photos and documents. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!confirmDelete) return;
+                try {
+                  await deleteVisit.mutateAsync(confirmDelete.id);
+                  toast.success("Visit deleted");
+                } catch (e: any) {
+                  toast.error(e.message || "Could not delete visit");
+                } finally {
+                  setConfirmDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function VisitDetailSheet({
   visit, onClose, canComment, currentOfficerId, currentRole, userName,
+  canManageVisit, onEdit, onDelete,
 }: {
   visit: any | null;
   onClose: () => void;
@@ -364,33 +536,72 @@ function VisitDetailSheet({
   currentOfficerId: string | undefined;
   currentRole: string | undefined;
   userName: string | undefined;
+  canManageVisit: boolean;
+  onEdit: (v: any) => void;
+  onDelete: (v: any) => void;
 }) {
   const open = !!visit;
   const { data: comments, isLoading } = useVisitComments(visit?.id ?? null);
   const addComment = useAddVisitComment();
+  const deleteAttachment = useDeleteVisitAttachment();
   const [text, setText] = useState("");
   const [actionTaken, setActionTaken] = useState(true);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [confirmAtt, setConfirmAtt] = useState<any>(null);
+  const [replacingId, setReplacingId] = useState<string | null>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const [replaceTarget, setReplaceTarget] = useState<any>(null);
 
-  useEffect(() => {
+  const loadAttachments = useCallback(async () => {
     if (!visit?.id) { setAttachments([]); setSignedUrls({}); return; }
-    (async () => {
-      const { data } = await supabase
-        .from("visit_attachments")
-        .select("*")
-        .eq("visit_id", visit.id)
-        .order("created_at", { ascending: true });
-      const list = data || [];
-      setAttachments(list);
-      const urls: Record<string, string> = {};
-      for (const a of list) {
-        const { data: s } = await supabase.storage.from("documents").createSignedUrl(a.storage_path, 600);
-        if (s?.signedUrl) urls[a.id] = s.signedUrl;
-      }
-      setSignedUrls(urls);
-    })();
+    const { data } = await supabase
+      .from("visit_attachments")
+      .select("*")
+      .eq("visit_id", visit.id)
+      .order("created_at", { ascending: true });
+    const list = data || [];
+    setAttachments(list);
+    const urls: Record<string, string> = {};
+    for (const a of list) {
+      const { data: s } = await supabase.storage.from("documents").createSignedUrl(a.storage_path, 600);
+      if (s?.signedUrl) urls[a.id] = s.signedUrl;
+    }
+    setSignedUrls(urls);
   }, [visit?.id]);
+
+  useEffect(() => { loadAttachments(); }, [loadAttachments]);
+
+  const canManageAttachment = (a: any) =>
+    canManageVisit || (currentOfficerId && a.uploaded_by === currentOfficerId);
+
+  const handleReplace = async (a: any, file: File) => {
+    const allowed = a.kind === "photo" ? PHOTO_TYPES : DOC_TYPES;
+    const max = a.kind === "photo" ? PHOTO_MAX : DOC_MAX;
+    if (!allowed.includes(file.type)) { toast.error("Wrong file type"); return; }
+    if (file.size > max) { toast.error("File too large"); return; }
+    setReplacingId(a.id);
+    try {
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `visits/${a.visit_id}/${a.kind === "photo" ? "photos" : "docs"}/${crypto.randomUUID()}-${safe}`;
+      await uploadWithProgress(path, file, () => {});
+      const { error: insErr } = await supabase.from("visit_attachments").insert({
+        visit_id: a.visit_id, kind: a.kind, storage_path: path,
+        file_name: file.name, file_size: file.size, mime_type: file.type,
+        uploaded_by: currentOfficerId || null,
+      });
+      if (insErr) throw insErr;
+      await supabase.storage.from("documents").remove([a.storage_path]);
+      await supabase.from("visit_attachments").delete().eq("id", a.id);
+      toast.success("Attachment replaced");
+      await loadAttachments();
+    } catch (e: any) {
+      toast.error(e.message || "Replace failed");
+    } finally {
+      setReplacingId(null);
+      setReplaceTarget(null);
+    }
+  };
 
   const handlePost = async () => {
     if (!visit) return;
@@ -427,6 +638,16 @@ function VisitDetailSheet({
               <SheetDescription>
                 {visit.quarter} • Filed by {visit.guardian_secretaries?.name || "Guardian Secretary"}
               </SheetDescription>
+              {canManageVisit && (
+                <div className="flex gap-2 pt-2">
+                  <Button size="sm" variant="outline" onClick={() => onEdit(visit)}>
+                    <Pencil className="h-3 w-3 mr-1" /> Edit
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => onDelete(visit)}>
+                    <Trash2 className="h-3 w-3 mr-1" /> Delete
+                  </Button>
+                </div>
+              )}
             </SheetHeader>
 
             <div className="mt-4 space-y-3 text-sm">
@@ -457,32 +678,51 @@ function VisitDetailSheet({
                 <h4 className="gov-section-title flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" /> Photographs & Documents ({attachments.length})
                 </h4>
-                {attachments.filter(a => a.kind === "photo").length > 0 && (
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    {attachments.filter(a => a.kind === "photo").map((a) => (
-                      <a key={a.id} href={signedUrls[a.id]} target="_blank" rel="noreferrer" className="block">
-                        {signedUrls[a.id] ? (
-                          <img src={signedUrls[a.id]} alt={a.file_name} className="w-full h-24 object-cover rounded border border-border" />
+                <div className="grid grid-cols-1 gap-2 mt-3">
+                  {attachments.map((a) => (
+                    <div key={a.id} className="gov-card p-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        {a.kind === "photo" ? (
+                          signedUrls[a.id] ? (
+                            <img src={signedUrls[a.id]} alt={a.file_name} className="w-14 h-14 object-cover rounded border border-border" />
+                          ) : <div className="w-14 h-14 bg-muted rounded animate-pulse" />
                         ) : (
-                          <div className="w-full h-24 bg-muted rounded animate-pulse" />
+                          <div className="w-14 h-14 grid place-items-center bg-muted rounded border border-border">
+                            <FileText className="h-5 w-5 text-primary" />
+                          </div>
                         )}
-                      </a>
-                    ))}
-                  </div>
-                )}
-                {attachments.filter(a => a.kind === "document").length > 0 && (
-                  <div className="space-y-1 mt-3">
-                    {attachments.filter(a => a.kind === "document").map((a) => (
-                      <a key={a.id} href={signedUrls[a.id]} target="_blank" rel="noreferrer"
-                        className="flex items-center justify-between gov-card p-2 text-xs hover:bg-secondary/30">
-                        <span className="flex items-center gap-2 text-foreground truncate">
-                          <FileText className="h-3.5 w-3.5 text-primary" /> {a.file_name}
-                        </span>
-                        <span className="text-muted-foreground">{(a.file_size / 1024).toFixed(0)} KB</span>
-                      </a>
-                    ))}
-                  </div>
-                )}
+                        <div className="flex-1 min-w-0">
+                          <a href={signedUrls[a.id]} target="_blank" rel="noreferrer" className="block truncate text-foreground hover:underline">
+                            {a.file_name}
+                          </a>
+                          <div className="text-muted-foreground">{(a.file_size / 1024).toFixed(0)} KB</div>
+                        </div>
+                        {canManageAttachment(a) && (
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" disabled={replacingId === a.id}
+                              onClick={() => { setReplaceTarget(a); replaceInputRef.current?.click(); }} title="Replace">
+                              {replacingId === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ReplaceIcon className="h-3.5 w-3.5" />}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive"
+                              onClick={() => setConfirmAtt(a)} title="Delete">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <input
+                  ref={replaceInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f && replaceTarget) handleReplace(replaceTarget, f);
+                    e.target.value = "";
+                  }}
+                />
               </div>
             )}
 
@@ -539,6 +779,37 @@ function VisitDetailSheet({
             </div>
           </>
         )}
+
+        <AlertDialog open={!!confirmAtt} onOpenChange={(o) => !o && setConfirmAtt(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this attachment?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmAtt?.file_name} will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={async () => {
+                  if (!confirmAtt) return;
+                  try {
+                    await deleteAttachment.mutateAsync({ id: confirmAtt.id, visit_id: confirmAtt.visit_id, storage_path: confirmAtt.storage_path });
+                    toast.success("Attachment removed");
+                    await loadAttachments();
+                  } catch (e: any) {
+                    toast.error(e.message || "Delete failed");
+                  } finally {
+                    setConfirmAtt(null);
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SheetContent>
     </Sheet>
   );
