@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { Shield, Lock, Building2, Globe2, ArrowLeft, Mail } from "lucide-react";
+import emblem from "@/assets/maharashtra-emblem.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -108,11 +109,9 @@ export default function LoginPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
-              <Shield className="h-6 w-6 text-accent-foreground" />
-            </div>
+            <img src={emblem} alt="Government of Maharashtra emblem" className="w-14 h-14 object-contain bg-white rounded-lg p-1" width={56} height={56} />
             <div>
-              <h1 className="text-xl font-bold font-display">GS Portal</h1>
+              <h1 className="text-xl font-bold font-display">Guardian Secretary Portal</h1>
               <p className="text-xs opacity-70">Government of Maharashtra</p>
             </div>
           </div>
@@ -160,11 +159,9 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Shield className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src={emblem} alt="Government of Maharashtra emblem" className="w-12 h-12 object-contain" width={48} height={48} />
             <div>
-              <h1 className="text-lg font-bold font-display text-foreground">GS Portal</h1>
+              <h1 className="text-lg font-bold font-display text-foreground">Guardian Secretary Portal</h1>
               <p className="text-[10px] text-muted-foreground">Government of Maharashtra</p>
             </div>
           </div>
