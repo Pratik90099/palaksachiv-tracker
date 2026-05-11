@@ -1,12 +1,38 @@
 import { StaticPage } from "./StaticPage";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
+
+const MANUAL_LAST_UPDATED = "11 May 2026";
 
 export default function UserManualPage() {
   return (
-    <StaticPage title="User Manual" lastUpdated="11 May 2026">
+    <StaticPage title="User Manual" lastUpdated={MANUAL_LAST_UPDATED}>
+      <div className="flex flex-wrap gap-2 print:hidden -mt-2 mb-4">
+        <Button size="sm" variant="outline" onClick={() => window.print()}>
+          <Printer className="h-4 w-4 mr-1" /> Print / Save as PDF
+        </Button>
+      </div>
       <p>Quick reference guide for officers using the Guardian Secretary Portal. For administrator documentation, contact the CS Office IT cell.</p>
 
-      <h2>1. Signing in</h2>
+      <nav aria-label="Table of contents" className="gov-card-elevated print:hidden text-xs">
+        <p className="font-semibold mb-2 text-foreground">Contents</p>
+        <ol className="grid grid-cols-1 md:grid-cols-2 gap-y-1 gap-x-4 list-decimal pl-5">
+          <li><a href="#signing-in">Signing in</a></li>
+          <li><a href="#navigating">Navigating the portal</a></li>
+          <li><a href="#home">Home dashboard</a></li>
+          <li><a href="#projects">Projects and actionables</a></li>
+          <li><a href="#critical">Critical issues and escalations</a></li>
+          <li><a href="#visits">Visit management</a></li>
+          <li><a href="#minutes">Meeting minutes</a></li>
+          <li><a href="#insights">AI Insights</a></li>
+          <li><a href="#notifications">Notifications</a></li>
+          <li><a href="#report">Reporting a problem</a></li>
+          <li><a href="#accessibility">Accessibility</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="signing-in">1. Signing in</h2>
       <ol>
         <li>Visit <Link to="/login">/login</Link>.</li>
         <li>Choose your role from the dropdown (District Collector, Department Secretary, Palak Sachiv, Chief Secretary, or CS Office).</li>
