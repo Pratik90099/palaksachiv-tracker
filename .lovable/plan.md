@@ -1,52 +1,107 @@
-## Diagnosed root causes
+## Goals
 
-**1. Visit RLS error (`new row violates row-level security policy for table "visits"`)**
-After OTP login, the app signs in anonymously to Supabase but **never calls `bind_session_officer(officer_id)`**. Every officer-write RLS policy requires `current_officer_id() IS NOT NULL`, which returns NULL → every officer insert/update/delete (visits, projects, tasks, comments, notifications, document_uploads, ai_insights, meeting_minutes) is blocked. This is the single biggest bug in the app right now.
+1. Lock down visit attachment visibility to match role/district scoping.
+2. Add upload progress + retry for visit photos/documents.
+3. Add delete/replace for attachments in the Visit detail sheet, role-gated with confirmation.
+4. Add edit/delete for the visit itself, restricted to the authoring Guardian Secretary (and admins).
+5. End-to-end sweep of pages/buttons; report broken or silent actions by URL × role.
 
-**2. "Failed to send a request to the Edge Function" (Insights & Document AI)**
-Both edge functions send an `x-cso-email` custom header from the browser, but their CORS `Access-Control-Allow-Headers` lists **do not include `x-cso-email`**. The browser's preflight rejects the request before the function ever runs — hence the generic "Failed to send a request" error.
+---
 
-**3. Visit-report photos & documents do nothing**
-In `VisitsPage.tsx`, the "Upload Photos" and "Upload Documents" buttons are decorative placeholders with no handler, no storage upload, and no DB linkage.
+## 1. Attachment visibility (RLS + UI)
 
-## Fixes (scoped to what you reported)
+Current state: `visit_attachments` SELECT policy is `true` for all authenticated users → any logged-in officer can list every district's photos/docs. Same risk on `visit_comments`.
 
-### A. Bind officer to Supabase session after login
-- In `auth-adapter.ts` `verifyLoginOtp` (and `loginAsOfficer` for impersonation), after we know the officer id:
-  - `await supabase.auth.signInAnonymously()` if no session yet.
-  - `await supabase.rpc("bind_session_officer", { _officer_id: u.id })`.
-- In `auth-context.tsx` `ensureSupabaseSession`, also re-bind on reload using the cached user.id so that returning users keep officer-write privileges.
-- Net effect: visits, projects, tasks, comments, notifications, etc. will all insert successfully.
+Fix:
+- Tighten SELECT on `visit_attachments` and `visit_comments` to only allow rows where the parent `visits.district_id` is visible to the caller:
+  - admin (`has_role(... ,'admin')`) → all
+  - chief_secretary / cmo → all
+  - district_collector / guardian_secretary → only rows whose visit's district matches their `officers.district_id`
+  - divisional_commissioner → districts in their division
+  - department_secretary → none (visits are district artifacts)
+- Add a SECURITY DEFINER helper `can_see_visit(visit_id)` to keep the policy simple and avoid recursion.
+- Storage: add a SELECT policy on `storage.objects` for bucket `documents` path `visits/<visit_id>/...` mirroring the same rule (currently uploads work but signed-URL reads should also be gated).
+- Frontend `useRoleFilter.filterVisits` already scopes the list; keep it as a defense-in-depth layer.
 
-### B. Fix CORS on the two AI edge functions
-- `supabase/functions/generate-insights/index.ts` and `supabase/functions/process-document/index.ts`: add `x-cso-email` to `Access-Control-Allow-Headers`. Redeploy both functions.
-- After fix, "Generate Insights" and "Process Document" calls reach the function instead of failing at preflight.
+## 2. Upload progress + retry
 
-### C. Make visit photo & document upload work
-- Add a new `visit_attachments` table (`visit_id`, `kind enum 'photo'|'document'`, `storage_path`, `file_name`, `file_size`, `mime_type`, `uploaded_by`, `created_at`). Authenticated read; officer/admin insert+delete via the standard `current_officer_id()` policy. Reuse the existing private `documents` storage bucket; store under `visits/{visit_id}/...`.
-- In `VisitsPage.tsx`:
-  - Replace the two placeholder cards with real `<input type="file" multiple>` controls.
-  - Photos: accept `image/jpeg,image/png`, max 20 files, 5 MB each.
-  - Docs: accept `.pdf,.docx,.xlsx`, max 10 files, 10 MB each.
-  - Upload to `documents` bucket via `supabase.storage.from('documents').upload(...)`, then insert `visit_attachments` rows.
-  - On the `VisitDetailSheet`, show a thumbnail grid for photos (signed URLs) and a download list for documents.
+In `VisitsPage.tsx` upload handlers:
+- Track per-file state: `{ id, name, progress, status: 'queued'|'uploading'|'error'|'done', error? }` in a `useState` array.
+- Use `supabase.storage.from('documents').upload(path, file, { ... })` inside a small wrapper that streams `XMLHttpRequest` for progress (Supabase JS does not expose progress events; use `fetch` to the storage REST endpoint with a signed upload URL via `createSignedUploadUrl` so we can attach an `XHR.upload.onprogress`).
+- Render a compact list under the upload buttons with a `<Progress />` bar, file name, % and a Retry button on error.
+- Retry re-runs the same upload + DB insert for only failed items, keeps successful ones.
+- Validate size/type client-side before queuing (current 5MB photo / 10MB doc limits).
 
-## Out of scope for this turn
+## 3. Attachment delete & replace in Visit detail sheet
 
-Your request also says "fix all the buttons / functions in this whole website end-to-end". That's hundreds of buttons across 30+ pages and not actionable as a single change without first knowing which actually misbehave. After the three fixes above ship, the visible breakage from missing officer binding alone disappears across most pages (it was the silent cause of many "save fails" you may have seen). I'll ask you to point me at any specific buttons that still don't work and I'll batch-fix those next.
+In `VisitDetailSheet`:
+- Show each attachment row with: thumbnail/icon, name, size, uploader, "Replace" and "Delete" buttons.
+- Permission rule: visible only when `currentOfficerId === uploaded_by` OR user is admin/CS/CMO. Collectors cannot delete a Guardian Secretary's photos.
+- Delete flow: `<AlertDialog>` confirmation → remove `storage.objects` row at `storage_path` → delete `visit_attachments` row → invalidate query.
+- Replace flow: same confirmation, then file picker → upload new file → on success delete the old object + row, insert new row. Reuses the progress/retry component from §2.
+- RLS already supports this (uploader-or-admin DELETE). Add matching `storage.objects` DELETE policy for the same scope.
 
-## Technical details (for reference)
+## 4. Edit / delete the visit itself
 
-```text
-Login flow after fix:
-  verify_login_otp  →  officer
-  └── signInAnonymously (if needed)
-      └── rpc bind_session_officer(officer.id)
-          └── session_officer_map row → current_officer_id() works
-              └── all officer-write RLS policies pass
+In `VisitsPage` row actions (and inside the detail sheet header):
+- Add "Edit" and "Delete" buttons visible only when:
+  - `user.role === 'guardian_secretary'` AND `visit.gs_id` maps to current officer, OR
+  - admin / chief_secretary / cmo
+- Edit: opens the existing create-visit dialog pre-filled (`visit_date`, `quarter`, `status`, `rating`, `issues_logged`, `observations`). New `useUpdateVisit` mutation.
+- Delete: `AlertDialog` confirmation → `useDeleteVisit` mutation. Cascade-delete attached storage files first (list `visit_attachments`, remove from `documents` bucket, then delete rows; finally delete the visit). Comments and attachments are removed via DB cascade once we add `ON DELETE CASCADE` FKs (none exist today — add them in the migration).
+- RLS for visit UPDATE/DELETE: tighten current `current_officer_id() IS NOT NULL` to `gs_id = current_officer_id() OR admin/CS/CMO via has_role`.
+
+## 5. End-to-end sweep
+
+Process:
+- Log in once per role (district_collector, guardian_secretary, department_secretary, chief_secretary, system_admin) using the QA bypass account.
+- For every route in `AppSidebar` + footer + dashboard widgets, click each primary button and form submit. Capture (a) network 4xx/5xx, (b) console errors, (c) toasts that never appear, (d) buttons with no `onClick`.
+- Deliverable: a table in the final reply — `Route | Role | Element | Symptom | Root cause | Fix`.
+- Known suspects to verify first: ActionablesPage filters, ProjectsPage create/edit/delete, TaskFormDialog assign-officer, NotificationsPage mark-as-read, AlertsPage acknowledge, DocumentAIPage upload + process, InsightsPage generate, RecordMinutesPage save + export PDF, GovernanceScorecardPage refresh, HeatMapPage drilldown, OfficerFormDialog admin-only fields, ProfilePage save, SettingsPage toggles, static footer pages.
+
+---
+
+## Technical sections
+
+### Migration outline
+
+```sql
+-- helper
+create or replace function public.can_see_visit(_visit_id uuid)
+returns boolean language sql stable security definer set search_path=public as $$
+  select case
+    when has_role(auth.uid(),'admin') then true
+    else exists (
+      select 1
+      from visits v
+      join officers o on o.id = current_officer_id()
+      where v.id = _visit_id
+        and (
+          o.role in ('chief_secretary','cmo')
+          or (o.role in ('district_collector','guardian_secretary') and o.district_id = v.district_id)
+          or (o.role='divisional_commissioner' and v.district_id in (
+                select id from districts where division = (select division from districts where id=o.district_id)))
+        )
+    )
+  end;
+$$;
+
+-- replace permissive SELECT on visit_attachments / visit_comments / visits with can_see_visit(...)
+-- tighten visits UPDATE/DELETE to gs_id = current_officer_id() OR admin/CS/CMO
+-- add storage.objects SELECT/DELETE policies for bucket=documents path like 'visits/%'
+-- add ON DELETE CASCADE for visit_attachments.visit_id and visit_comments.visit_id
 ```
 
-CORS allowlist (both functions):
-`authorization, x-client-info, apikey, content-type, x-cso-email, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version`
+### New / changed files
+- `supabase/migrations/<ts>_visit_scoping_and_edit.sql`
+- `src/hooks/use-data.ts` — add `useUpdateVisit`, `useDeleteVisit`, `useDeleteVisitAttachment`, `useReplaceVisitAttachment`.
+- `src/components/UploadQueue.tsx` (new) — progress + retry UI used by VisitsPage.
+- `src/pages/VisitsPage.tsx` — wire edit/delete on visit, attachment delete/replace, upload queue.
+- (After sweep) targeted fixes per finding.
 
-Storage path convention: `visits/{visit_id}/photos/{uuid}-{filename}` and `visits/{visit_id}/docs/{uuid}-{filename}` in the existing private `documents` bucket; UI fetches via `createSignedUrl(60)`.
+### Out of scope
+- Re-architecting role storage (already in `officers` per project memory).
+- Changing the documents bucket from private to public.
+
+## Deliverable to user
+A short bug list from §5 plus the implemented changes from §1-§4.
