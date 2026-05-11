@@ -127,6 +127,10 @@ function AppRoutes() {
         path="/admin/ai-telemetry"
         element={<RoleProtectedRoute roles={["system_admin"]}><AITelemetryPage /></RoleProtectedRoute>}
       />
+      <Route
+        path="/admin/audit-trail"
+        element={<RoleProtectedRoute roles={["system_admin", "chief_secretary"]}><AuditTrailPage /></RoleProtectedRoute>}
+      />
 
       {/* GIGW static pages — public */}
       <Route path="/accessibility-statement" element={<AccessibilityPage />} />
