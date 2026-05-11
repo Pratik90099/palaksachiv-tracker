@@ -25,7 +25,7 @@ import HelpPage from "./pages/HelpPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import SettingsPage from "./pages/SettingsPage";
 import CategoryTagDashboard from "./pages/CategoryTagDashboard";
-import IntegrationHealthPage from "./pages/IntegrationHealthPage";
+
 import GovernanceScorecardPage from "./pages/GovernanceScorecardPage";
 import RecordMinutesPage from "./pages/RecordMinutesPage";
 import DocumentAIPage from "./pages/DocumentAIPage";
@@ -85,7 +85,7 @@ function AppRoutes() {
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
       <Route path="/category-dashboard" element={<ProtectedRoute><CategoryTagDashboard /></ProtectedRoute>} />
-      <Route path="/integration-health" element={<ProtectedRoute><IntegrationHealthPage /></ProtectedRoute>} />
+      
       <Route path="/governance-scorecard" element={<ProtectedRoute><GovernanceScorecardPage /></ProtectedRoute>} />
 
       {/* Role-restricted routes */}

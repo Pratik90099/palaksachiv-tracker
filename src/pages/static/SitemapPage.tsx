@@ -22,7 +22,7 @@ const SECTIONS: { title: string; links: { to: string; label: string }[] }[] = [
       { to: "/compliance", label: "Visit Compliance" },
       { to: "/governance-scorecard", label: "Governance Scorecard" },
       { to: "/category-dashboard", label: "Category Dashboard" },
-      { to: "/integration-health", label: "Integration Health" },
+      
       { to: "/insights", label: "AI Insights" },
       { to: "/reports", label: "MIS Reports" },
     ],
