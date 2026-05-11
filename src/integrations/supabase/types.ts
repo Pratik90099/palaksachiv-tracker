@@ -986,7 +986,15 @@ export type Database = {
           uploaded_by?: string | null
           visit_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "visit_attachments_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       visit_comments: {
         Row: {
@@ -1262,6 +1270,7 @@ export type Database = {
         Args: { _officer_id: string }
         Returns: undefined
       }
+      can_see_visit: { Args: { _visit_id: string }; Returns: boolean }
       consume_pending_otp_for_dispatch: {
         Args: { _otp_id: string }
         Returns: Json
@@ -1350,6 +1359,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_privileged_visit_writer: { Args: never; Returns: boolean }
+      is_visit_owner: { Args: { _visit_id: string }; Returns: boolean }
       request_login_otp: {
         Args: { _email: string; _role: string }
         Returns: Json

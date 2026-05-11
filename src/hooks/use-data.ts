@@ -525,6 +525,56 @@ export function useAddVisitComment() {
   });
 }
 
+// Update Visit
+export function useUpdateVisit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; [k: string]: any }) => {
+      const { id, ...rest } = input;
+      const { error } = await supabase.from("visits").update(rest as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["visits"] }),
+  });
+}
+
+// Delete Visit (also removes storage files for its attachments)
+export function useDeleteVisit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data: atts } = await supabase
+        .from("visit_attachments")
+        .select("storage_path")
+        .eq("visit_id", id);
+      const paths = (atts || []).map((a: any) => a.storage_path).filter(Boolean);
+      if (paths.length > 0) {
+        await supabase.storage.from("documents").remove(paths);
+      }
+      const { error } = await supabase.from("visits").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["visits"] });
+    },
+  });
+}
+
+// Delete a single visit attachment
+export function useDeleteVisitAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; visit_id: string; storage_path: string }) => {
+      await supabase.storage.from("documents").remove([input.storage_path]);
+      const { error } = await supabase.from("visit_attachments").delete().eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["visit_attachments", vars.visit_id] });
+    },
+  });
+}
+
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
