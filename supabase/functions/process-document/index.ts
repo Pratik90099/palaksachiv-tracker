@@ -220,7 +220,20 @@ serve(async (req) => {
       );
     }
 
-    return jsonResponse({ result: validation.data, mode, fileName: safeFileName }, 200);
+    // Telemetry (best-effort)
+    try {
+      const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      const SUPA_URL = Deno.env.get("SUPABASE_URL");
+      if (SERVICE_KEY && SUPA_URL) {
+        const admin = createClient(SUPA_URL, SERVICE_KEY);
+        admin.from("ai_call_logs").insert({
+          function_name: "process-document",
+          provider, status: 200, latency_ms: latencyMs,
+        }).then(() => {}, () => {});
+      }
+    } catch { /* ignore */ }
+
+    return jsonResponse({ result: validation.data, mode, fileName: safeFileName, provider, latencyMs }, 200);
   } catch (e) {
     console.error("process-document error:", e);
     return jsonResponse(
