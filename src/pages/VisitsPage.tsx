@@ -452,6 +452,40 @@ function VisitDetailSheet({
               )}
             </div>
 
+            {attachments.length > 0 && (
+              <div className="mt-6">
+                <h4 className="gov-section-title flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" /> Photographs & Documents ({attachments.length})
+                </h4>
+                {attachments.filter(a => a.kind === "photo").length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    {attachments.filter(a => a.kind === "photo").map((a) => (
+                      <a key={a.id} href={signedUrls[a.id]} target="_blank" rel="noreferrer" className="block">
+                        {signedUrls[a.id] ? (
+                          <img src={signedUrls[a.id]} alt={a.file_name} className="w-full h-24 object-cover rounded border border-border" />
+                        ) : (
+                          <div className="w-full h-24 bg-muted rounded animate-pulse" />
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {attachments.filter(a => a.kind === "document").length > 0 && (
+                  <div className="space-y-1 mt-3">
+                    {attachments.filter(a => a.kind === "document").map((a) => (
+                      <a key={a.id} href={signedUrls[a.id]} target="_blank" rel="noreferrer"
+                        className="flex items-center justify-between gov-card p-2 text-xs hover:bg-secondary/30">
+                        <span className="flex items-center gap-2 text-foreground truncate">
+                          <FileText className="h-3.5 w-3.5 text-primary" /> {a.file_name}
+                        </span>
+                        <span className="text-muted-foreground">{(a.file_size / 1024).toFixed(0)} KB</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="mt-6">
               <h4 className="gov-section-title flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" /> Action Taken & Comments
