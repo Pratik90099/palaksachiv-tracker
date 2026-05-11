@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_call_logs: {
+        Row: {
+          caller_email: string | null
+          created_at: string
+          error_code: string | null
+          function_name: string
+          id: string
+          latency_ms: number | null
+          provider: string
+          status: number
+        }
+        Insert: {
+          caller_email?: string | null
+          created_at?: string
+          error_code?: string | null
+          function_name: string
+          id?: string
+          latency_ms?: number | null
+          provider: string
+          status: number
+        }
+        Update: {
+          caller_email?: string | null
+          created_at?: string
+          error_code?: string | null
+          function_name?: string
+          id?: string
+          latency_ms?: number | null
+          provider?: string
+          status?: number
+        }
+        Relationships: []
+      }
       ai_insights: {
         Row: {
           generated_at: string
