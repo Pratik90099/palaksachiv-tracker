@@ -127,40 +127,74 @@ serve(async (req) => {
   try {
     const userPrompt = `Document: "${safeFileName}"\n\n---\n${content}\n---\n\nProcess this document according to your instructions. Return valid JSON only, no markdown code fences.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPTS[mode as Mode] }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: { responseMimeType: "application/json" },
-        }),
-      }
-    );
+    const t0 = Date.now();
+    let rawContent = "";
+    let provider = "gemini-direct";
+    let lastErr = "";
 
-    if (!response.ok) {
-      const errText = await response.text();
-      if (response.status === 429) {
-        return jsonResponse(
-          { error: "AI service rate limited. Please try again in a few moments." },
-          429
-        );
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_PROMPTS[mode as Mode] }] },
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+        }
+      );
+      if (response.ok) {
+        const aiResponse = await response.json();
+        rawContent = aiResponse.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("") || "";
+      } else {
+        lastErr = `Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`;
+        console.warn("[process-document]", lastErr);
       }
-      if (response.status === 403 && /RESOURCE_EXHAUSTED|quota/i.test(errText)) {
-        return jsonResponse(
-          { error: "AI service quota exhausted. Please contact admin." },
-          402
-        );
-      }
-      console.error("Gemini API error:", response.status, errText);
-      return jsonResponse({ error: "AI processing failed" }, 500);
+    } catch (err) {
+      lastErr = `Gemini network: ${err instanceof Error ? err.message : String(err)}`;
     }
 
-    const aiResponse = await response.json();
-    const rawContent =
-      aiResponse.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("") || "";
+    // Fallback to Lovable AI Gateway on Gemini failure
+    if (!rawContent) {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (LOVABLE_API_KEY) {
+        provider = "lovable-gateway";
+        try {
+          const fb = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: SYSTEM_PROMPTS[mode as Mode] },
+                { role: "user", content: userPrompt },
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+          if (fb.ok) {
+            const fbJson = await fb.json();
+            rawContent = fbJson.choices?.[0]?.message?.content || "";
+          } else {
+            lastErr = `Fallback ${fb.status}: ${(await fb.text()).slice(0, 300)}`;
+          }
+        } catch (err) {
+          lastErr = `Fallback network: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      }
+    }
+
+    const latencyMs = Date.now() - t0;
+
+    if (!rawContent) {
+      const status = /quota|RESOURCE_EXHAUSTED/i.test(lastErr) ? 402
+                   : /429/.test(lastErr) ? 429
+                   : 502;
+      return jsonResponse({ error: `AI processing failed: ${lastErr}`, latencyMs }, status);
+    }
+
 
     // Try to parse JSON from the AI response
     let parsedResult: any;
