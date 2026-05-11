@@ -1,7 +1,7 @@
 import {
   Home, MapPin, ClipboardList, AlertTriangle, Users, FileText,
   Settings, LogOut, Shield, Bell, BarChart3, Globe, Calendar, Building2,
-  FolderKanban, User, HelpCircle, Tag, Activity, Trophy, BookOpen, FileUp, Sparkles, LineChart
+  FolderKanban, User, HelpCircle, Tag, Trophy, BookOpen, FileUp, Sparkles, LineChart
 } from "lucide-react";
 import emblem from "@/assets/maharashtra-emblem.png";
 import { NavLink } from "@/components/NavLink";
