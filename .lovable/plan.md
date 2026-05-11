@@ -1,126 +1,152 @@
-# Plan: Security, AI Reliability, Admin Telemetry, GIGW & Extensibility
+## Scope
 
-This is a large multi-area change. I've grouped it into 6 workstreams. Each ships a clear outcome.
-
----
-
-## 1. Security hardening (database + realtime)
-
-**Problem:** Sensitive PII (officer emails/phones, guardian secretary emails, external identities) is readable by every authenticated session — and because the app uses anonymous Supabase sessions, that's effectively every visitor. `has_role` allows arbitrary user-ID probing. Notifications realtime is unscoped.
-
-**Changes (single migration):**
-
-- `**officers` table** — replace `Authenticated read officers` with two policies:
-  - Admins (`has_role(auth.uid(),'admin')`) and CSO/CS roles can read full rows.
-  - Create a SECURITY INVOKER **view** `public.officers_directory` exposing only safe columns (`id, name, designation, role, district_id, department_id, is_active`) — used everywhere the UI just needs a name/title. Update `useData`/forms to read from the view by default.
-- `**guardian_secretaries**` — restrict SELECT to `has_role(auth.uid(),'admin')`. Create `public.guardian_secretaries_public` view (id, name, designation, district_id) for general UI.
-- `**external_identities**` — restrict SELECT to `has_role(auth.uid(),'admin')` only (drop the broad authenticated read).
-- `**has_role(_user_id, _role)**` — add guard: `IF _user_id <> auth.uid() AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id=auth.uid() AND role='admin') THEN RETURN false; END IF;` so callers can only probe themselves unless they're already admin.
-- `**notifications` realtime** — add `recipient_officer_id uuid` column (nullable for broadcast), then RLS policy `recipient_officer_id IS NULL OR recipient_officer_id = (SELECT officer_id FROM current session mapping)`. Since the app doesn't currently map auth.uid → officer, we'll add a `session_officer_map` table populated by the OTP verify flow and read by a SECURITY DEFINER helper `current_officer_id()`. Realtime publication policy uses that helper.
-
-**Frontend touch-ups:**
-
-- Update queries that hit `officers`/`guardian_secretaries` for directory display to use the new public views.
-- Pages used by admins/CSO (UserManagement, OfficerFormDialog) keep using base tables — they'll still work because their callers satisfy the new admin policy (after we wire the JWT/officer mapping below).
+Thirteen items spanning bug-fixes, feature additions, security/architecture, and content. I'll group them into 5 workstreams and sequence them so blockers (JWT refactor, dynamic roles) land before features that depend on them.
 
 ---
 
-## 2. AI reliability — Gemini + Lovable Gateway fallback + better errors
+## Workstream A — Insights bug-fix & AI telemetry (items 1, 12, 13)
 
-Both `process-document` and `generate-insights` currently call Gemini directly. If Gemini returns 429 or 403/RESOURCE_EXHAUSTED or 5xx, we fall back to the Lovable AI Gateway (`google/gemini-2.5-flash`) using the existing `LOVABLE_API_KEY` secret.
+**Diagnose item 1 ("Edge Function returned non-2xx")**
+- Edge function logs show only boot/shutdown — function isn't actually being hit, or crashes before logging. Suspect: `GEMINI_API_KEY` env read inside `Deno.serve` throws synchronously; or auth header missing because Insights page is called from a CSO admin session that has no `auth.users` JWT (only `x-cso-email`), so `userClient.auth.getClaims(token)` rejects → 401 with no body the client surfaces.
+- Fix: drop the `getClaims` requirement for app-level CSO sessions. Replace with anon-key bearer + mandatory `x-cso-email` validated against `officers` (already done lower in the file). Return descriptive JSON for every failure path.
+- Add a `?health=1` GET returning `{ok:true, gemini:!!key}` for one-shot smoke testing from the UI.
 
-- Wrap the Gemini call in a helper `callAIWithFallback({system, user, tools?})` that:
-  1. Tries Gemini direct.
-  2. On 429 / 403-quota / 5xx (or network error), retries via Lovable Gateway with equivalent OpenAI-style payload.
-  3. Returns `{provider, latencyMs, status, payload}`.
-- **Error mapping → UI:** propagate explicit messages: `"AI quota exhausted (Gemini + fallback)"`, `"AI rate-limited, please retry in N seconds"`, `"AI service error (5xx)"`. Surface them in toast + the page error block.
-- **Resolve "Failed to send a request to the Edge Function"** on Insights:
-  - Root cause is almost certainly the `x-cso-email` header check rejecting the caller (silent 403 swallowed by `supabase.functions.invoke` → generic FunctionsHttpError). Fix:
-    - Always send `x-cso-email` from the client (currently only set in some flows).
-    - Return descriptive JSON error bodies with CORS headers (already done) and surface the body on the client via `data?.error` instead of just the thrown message.
-  - Add a preflight ping (`?health=1` GET) the page can call to confirm the function is reachable before "Generate Insights".
+**Item 12 — End-to-end test**
+- After fix, click "Generate Insights" → verify either Gemini or fallback path persists `ai_insights` and `ai_call_logs` row, and toast shows provider suffix on fallback.
 
----
-
-## 3. Admin telemetry — Gemini usage dashboard
-
-- New table `ai_call_logs` (function_name, provider, status, latency_ms, error_code, prompt_tokens?, completion_tokens?, created_at, caller_email). RLS: admin/CSO read, edge functions insert via service role.
-- Both edge functions write one row per call (success or failure) — no PII (no prompt/response stored).
-- New page `**/admin/ai-telemetry**` (CSO/admin only) showing per-day for last 30 days:
-  - Total calls, avg latency, error rate, breakdown by provider (Gemini direct vs fallback) and by function.
-  - Simple charts via existing `recharts` (already in repo via shadcn `chart.tsx`).
+**Item 13 — `/admin/ai-telemetry` page**
+- New route gated to `is_cso_admin` only.
+- Charts: calls/day stacked by provider, avg latency line, error-rate %, table of last 100 rows.
+- Uses `recharts` (already a dep). Reads from `ai_call_logs` directly via RLS (already authenticated-readable).
 
 ---
 
-## 4. User Management — fully working + edge function reflects changes
+## Workstream B — Manage Officer + dynamic Roles/Agencies (items 4, 11)
 
-- Audit `UserManagementPage` + `OfficerFormDialog`: ensure create / edit / activate-deactivate writes go through (currently RLS requires `has_role(auth.uid(),'admin')` which the anonymous session does NOT satisfy → silent failures).
-- Add lightweight server-side admin check via new edge function `manage-officer` (service-role) gated by the same `x-cso-email` header pattern hardened by lookup against `officers.is_cso_admin OR role IN ('chief_secretary','system_admin')`.
-- All officer CRUD goes through `manage-officer`, so changes are reflected immediately and bypass the anonymous-session RLS gap until the full per-user JWT refactor lands.
-- After any officer change, refresh the cached officers list in `useData`.
+**New tables**
+- `roles` (`key` text PK, `label_en`, `label_mr`, `is_system` bool, `created_at`). Seed with the 7 existing role keys, all `is_system=true`.
+- `agencies` (`id`, `name`, `short_name`, `type` text, `parent_department_id` FK→departments null, `is_active`, timestamps). Replaces free-text `tasks.agency`.
+- RLS: public SELECT; admin-only INSERT/UPDATE/DELETE.
 
----
+**Edge function `manage-officer`**
+- Service-role bypasses the anonymous-session gap.
+- Header `x-cso-email` → look up officer → require `is_cso_admin=true` (or `chief_secretary`).
+- Actions: `create | update | deactivate | set_role`. **Role changes accepted only from this function** (item 4) — UI hides the role dropdown for non-admins; backend rejects non-admin role mutations.
+- Logs every action to `ai_call_logs`-style audit table `officer_audit_logs`.
 
-## 5. Dynamic roles & agencies (extensibility)
-
-- New tables:
-  - `roles` (key text PK, label_en, label_mr, is_system bool, created_at) — seed with the existing 5.
-  - `agencies` (id, name, short_name, type, parent_department_id nullable, created_at) — independent of `departments` but mappable to one.
-- `officers.role` becomes FK-like text referencing `roles.key` (kept as text for compat). Add `officers.agency_id` nullable.
-- UI:
-  - User Management → "Manage Roles" dialog (admin only): add/edit/disable non-system roles.
-  - User Management → "Manage Agencies" dialog: CRUD agencies, choose parent department.
-  - Officer form: role dropdown reads from `roles`; new "Agency" select reads from `agencies` filtered by selected department.
-- Login dropdown stays the 5 system roles (auth flow unchanged); custom roles are for assignment/visibility only in this iteration.
+**UI**
+- `UserManagementPage` rewritten to invoke `manage-officer` instead of direct table writes.
+- "Manage Roles" and "Manage Agencies" dialogs (admin-only) for CRUD.
+- `OfficerFormDialog`: role dropdown driven by `roles` table; agency multiselect filtered by selected department.
+- Refresh `useData` officer cache after each successful action.
 
 ---
 
-## 6. GIGW compliance + visitor counter
+## Workstream C — Per-user JWT refactor scoping (item 10)
 
-GIGW = Guidelines for Indian Government Websites. We'll add the items that apply to a logged-in portal:
+**Goal:** every officer login produces a real Supabase auth user (anon-disabled), so `auth.uid()` is meaningful and we can lock `officers.email/phone` to admins via column-level RLS without breaking joins (joins move to `officers_directory` view exposing only safe cols).
 
-- **Header/footer:**
-  - Government of Maharashtra emblem + portal title (already present — verify).
-  - Footer with: "Last Updated: &nbsp;", "Content owned by Chief Secretary's Office, Govt. of Maharashtra", links to *Accessibility Statement, Privacy Policy, Terms, Hyperlinking Policy, Copyright Policy, Help, Sitemap, Contact Us*.
-  - Visitor counter (see below) + "Best viewed in…" line.
-- **Accessibility (WCAG 2.1 AA):**
-  - Add skip-to-main-content link, ensure all interactive elements have aria-labels, audit color contrast, add `lang="en"`/`lang="mr"` switching, font-size A- A A+ control in header.
-- **New static pages:** `/accessibility`, `/privacy`, `/terms`, `/copyright`, `/hyperlinking`, `/sitemap`, `/contact`, `/help` (Help already exists).
-- **Visitor counter:**
-  - Table `site_visits (id, visited_at, session_hash)`. Edge function `record-visit` (public, no auth) called once per browser session (sessionStorage flag) inserts a row.
-  - Footer widget shows total + today's count via lightweight RPC `get_visitor_counts()` returning `{total, today}`.
+**Approach (scoped — implementation in a follow-up PR)**
+1. Extend `verify_login_otp` to call an internal edge function that mints a Supabase magic-link / signs in via service role (`admin.createUser` once, then `admin.generateLink('magiclink')` and exchange).
+2. Replace `bind_session_officer` with a deterministic mapping: `auth.users.email = officers.email`; insert into `user_roles` based on officer role (admin / authenticated). Trigger on first login.
+3. Migrate every edge function that currently reads `x-cso-email` to use `auth.getUser(token)` → look up officer by `email`. Header becomes a fallback for legacy clients during rollout.
+4. Tighten `officers` SELECT policy: split into two policies (admin → all cols; authenticated → safe cols via `officers_directory` view). Drop `Authenticated read officers safe columns` blanket policy.
+5. Frontend: `auth-adapter.ts` stores the real session; `useAuth` exposes `supabase.auth.getSession()` instead of localStorage user.
+
+**Risk register:** OTP UX must not regress; QA bypass account (`pratikbbavi@gmail.com`) needs a real auth.users row pre-seeded; realtime channels must rebind on token refresh.
+
+This workstream ships as a separate PR after B is verified in production.
 
 ---
 
-## Out of scope (explicit)
+## Workstream D — Collaboration features (items 2, 3, 5, 6)
 
-- Replacing the anonymous-session RLS architecture with per-user JWTs (tracked separately as the big auth refactor — items 1 and 4 are mitigations until then).
-- SMS OTP delivery.
-- Translating every page to Marathi (we add the toggle + key static pages; full content i18n is a follow-up).
-- in task management allow department secretary and chief secretary to assign task to any of collector or guardian secretary/ palak sachiv and task should be refelected in their concerened task. same in for in minutes if any task is alloted it should reflect in their task management and also these task status should be shown to the alloter and globally all to chief secretary and admin. allotment can be @collector.district
+**Item 2 — Profile pictures**
+- New storage bucket `avatars` (public), folder per officer id.
+- `officers.avatar_url` text column.
+- `ProfilePage`: upload widget (≤2 MB, jpg/png/webp), client-side crop to square, write to bucket, update officer row via `manage-officer`.
+- Sidebar + header show avatar with initials fallback.
+
+**Item 3 — Confirmatory dialogs on critical updates**
+- New `<ConfirmDialog>` primitive wrapping `AlertDialog`.
+- Wrap: officer create/update/deactivate, role change, project/task delete, marking issue critical, GoI-pending toggle, closure sign-off, CS Remarks deadline change.
+- All confirmations log a row to `audit_logs` with before/after JSON (extend existing audit table or create one).
+
+**Item 5 — @mention by designation/role**
+- New RPC `search_mention_targets(_q text)` returning officers + virtual handles like `@collector.mumbai_city`, `@palak.pune`, `@deptsec.health`.
+- Reusable `<MentionTextarea>` (uses `@tiptap/extension-mention` or lightweight popover) plugged into `TaskFormDialog` description, Minutes editor, Remarks composer.
+- Mentions stored as `[{handle, officer_id, scope}]` JSONB array on the parent record; rendered as chips; trigger notification to each resolved officer (uses `notifications.recipient_officer_id` from prior PR).
+
+**Item 6 — "Message admin" escape hatch**
+- Floating "Report a problem" button (footer + global error boundary) → opens dialog capturing message, current route, last console error.
+- Edge function `report-issue` writes to new `support_tickets` table and emails the CSO admin via the existing `send-login-otp` Gmail connector (reuse transport).
+- Admin sees tickets at `/admin/support`.
+
+---
+
+## Workstream E — Branding, GIGW pages, and user manual (items 7, 8, 9)
+
+**Item 8 — Logo swap**
+- User must upload the official Maharashtra State Emblem (Ashoka pillar + "महाराष्ट्र शासन") — I'll add a placeholder slot now (`src/assets/maharashtra-emblem.svg`) and ask for the asset in the next step.
+- Replace blue GS logo across `AppSidebar`, `LoginPage`, `SiteFooter`, favicon, OG image.
+- Keep the existing wordmark "Guardian Secretary Portal" beside the emblem.
+
+**Item 9 — GIGW static pages**
+Create routes + content for:
+- `/accessibility-statement` (WCAG 2.1 AA conformance, contact for accessibility issues, font-size A- A A+ tested, skip-link present)
+- `/privacy-policy` (data classes, retention 10y, lawful basis, grievance officer)
+- `/terms-of-use`
+- `/copyright-policy`
+- `/hyperlinking-policy`
+- `/sitemap` (auto-generated from route registry)
+- `/contact-us` (CSO address, helpline, support email — wired to item-6 form)
+- `/help` (links to user manual below)
+
+Footer (`SiteFooter.tsx`) gets all GIGW-required elements: emblem, "Content owned by Chief Secretary's Office, Government of Maharashtra", "Last Updated: <build date>", visitor counter (already added), accessibility toolbar (A- A A+ + high-contrast), language switch (EN/MR scaffold), STQC logo placeholder, link block for the 8 pages above. Add `<a href="#main-content" class="skip-link">` at top of `AppLayout`.
+
+**Item 7 — User manual (digital, end-users only)**
+- `/help/user-manual` route serving an MDX-rendered manual broken by role:
+  - Common: login & OTP, navigation, search, notifications, raising support
+  - District Collector: critical issues, GoI-pending, visits
+  - Department Secretary / Palak Sachiv: tasks, minutes, compliance scoring
+  - Chief Secretary: scorecard, remarks, escalation matrix
+- Provide a "Download PDF" button that fetches a pre-generated `/public/docs/user-manual-v1.pdf` (I'll generate via puppeteer-like script post-approval).
+- Admin manual deliberately excluded as requested.
+
+---
+
+## Sequencing (4 PRs)
+
+1. **PR-1 (this batch)** — Workstream A (Insights fix + telemetry page) and Workstream E item 8 + 9 + 7. Low-risk, user-visible wins.
+2. **PR-2** — Workstream B (Manage Officer + dynamic roles/agencies + role-change lock).
+3. **PR-3** — Workstream D (avatars, confirm dialogs, mentions, support tickets).
+4. **PR-4** — Workstream C (per-user JWT refactor) + tighten officer column RLS.
+
+---
+
+## Out of scope / deferred
+
+- SMS OTP, full Marathi i18n translations of every page (scaffold only), Parichay SSO production wiring, mobile app.
 
 ---
 
 ## Verification checklist
 
-- Anonymous session can NO LONGER select from `officers`, `guardian_secretaries`, `external_identities` (only the safe views).
-- `has_role(<other-uid>, 'admin')` returns `false` from a non-admin session.
-- Notifications subscription only receives rows for the current officer.
-- Insights page: trigger Gemini quota error → fallback succeeds, banner shows "via fallback".
-- Insights page no longer shows "Failed to send a request to the Edge Function" — descriptive error appears instead.
-- Document AI: upload a small text file → JSON parses → row saved in `document_uploads`.
-- `/admin/ai-telemetry` shows recent calls for both functions.
-- Add/edit/deactivate an officer in User Management → list refreshes immediately, OTP login with the new officer works.
-- Footer visitor counter increments on first visit per browser session.
-- All new static pages reachable from footer; skip-link + font-size controls work.
+- [ ] Insights "Generate" returns 200 with provider field; on forced 429 falls back; on missing key returns descriptive 502.
+- [ ] `/admin/ai-telemetry` shows recent rows and renders charts.
+- [ ] Non-admin officer cannot change own or others' role (UI hidden + backend rejects).
+- [ ] Role and agency CRUD reflected in officer form dropdowns immediately.
+- [ ] Avatar upload appears in sidebar within 1s.
+- [ ] Critical updates show confirm dialog before persisting.
+- [ ] `@collector.mumbai_city` resolves and notifies the right officer.
+- [ ] "Report a problem" creates a ticket and emails admin.
+- [ ] Maharashtra emblem visible everywhere; old blue GS logo removed.
+- [ ] All 8 GIGW pages reachable from footer; skip-link works; A-/A/A+ controls resize body text.
+- [ ] User manual PDF downloads and matches in-app content.
 
 ---
 
-## Suggested rollout order (4 PRs)
+## Open question before I start PR-1
 
-1. **Security migration + officer/guardian views + has_role guard + notifications scoping** (must ship first; everything else assumes the new policies).
-2. **Edge function hardening: AI fallback, telemetry table + logging, error propagation, Insights bug fix.**
-3. `**manage-officer` edge function + dynamic roles/agencies tables + UI.**
-4. **GIGW pages, footer, visitor counter, accessibility polish, AI telemetry dashboard.**
-
-Approve to start with PR #1.
+1. **Maharashtra emblem asset (item 8)** — do you have the official SVG/PNG you want me to use, or should I generate a faithful rendering and let you replace it later?
+2. **User manual depth (item 7)** — short reference (≈10 pages, screenshots optional) or full walkthrough (≈30+ pages with annotated screenshots)?
