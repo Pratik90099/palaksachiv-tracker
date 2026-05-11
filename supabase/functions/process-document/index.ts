@@ -119,49 +119,48 @@ serve(async (req) => {
   // Audit log (no document content)
   console.log(`[process-document] mode=${mode} fileName=${safeFileName} contentLen=${content.length}`);
 
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) {
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_API_KEY) {
     return jsonResponse({ error: "AI service not configured" }, 500);
   }
 
   try {
     const userPrompt = `Document: "${safeFileName}"\n\n---\n${content}\n---\n\nProcess this document according to your instructions. Return valid JSON only, no markdown code fences.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPTS[mode as Mode] },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPTS[mode as Mode] }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: { responseMimeType: "application/json" },
+        }),
+      }
+    );
 
     if (!response.ok) {
+      const errText = await response.text();
       if (response.status === 429) {
         return jsonResponse(
           { error: "AI service rate limited. Please try again in a few moments." },
           429
         );
       }
-      if (response.status === 402) {
+      if (response.status === 403 && /RESOURCE_EXHAUSTED|quota/i.test(errText)) {
         return jsonResponse(
-          { error: "AI service credits exhausted. Please contact admin." },
+          { error: "AI service quota exhausted. Please contact admin." },
           402
         );
       }
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
+      console.error("Gemini API error:", response.status, errText);
       return jsonResponse({ error: "AI processing failed" }, 500);
     }
 
     const aiResponse = await response.json();
-    const rawContent = aiResponse.choices?.[0]?.message?.content || "";
+    const rawContent =
+      aiResponse.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("") || "";
 
     // Try to parse JSON from the AI response
     let parsedResult: any;
