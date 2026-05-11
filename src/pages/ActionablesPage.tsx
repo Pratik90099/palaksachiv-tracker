@@ -56,8 +56,8 @@ export default function ActionablesPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground font-display">Actionables</h1>
-          <p className="text-sm text-muted-foreground mt-1">Track and manage all actionable items across districts</p>
+          <h1 className="text-2xl font-bold text-foreground font-display">Task Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Track and manage all tasks across districts and departments</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="text-muted-foreground">
