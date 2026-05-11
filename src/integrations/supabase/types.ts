@@ -952,6 +952,65 @@ export type Database = {
         }
         Relationships: []
       }
+      visit_comments: {
+        Row: {
+          author_officer_id: string | null
+          author_role: string | null
+          comment_text: string
+          created_at: string
+          id: string
+          is_action_taken: boolean
+          visit_id: string
+        }
+        Insert: {
+          author_officer_id?: string | null
+          author_role?: string | null
+          comment_text: string
+          created_at?: string
+          id?: string
+          is_action_taken?: boolean
+          visit_id: string
+        }
+        Update: {
+          author_officer_id?: string | null
+          author_role?: string | null
+          comment_text?: string
+          created_at?: string
+          id?: string
+          is_action_taken?: boolean
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_comments_author_officer_id_fkey"
+            columns: ["author_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_comments_author_officer_id_fkey"
+            columns: ["author_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers_admin"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_comments_author_officer_id_fkey"
+            columns: ["author_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_comments_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visits: {
         Row: {
           created_at: string
