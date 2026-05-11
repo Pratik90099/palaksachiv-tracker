@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   useVisits,
   useCreateVisit,
@@ -8,7 +8,8 @@ import {
 } from "@/hooks/use-data";
 import { useRoleFilter } from "@/hooks/use-role-filter";
 import { useAuth } from "@/lib/auth-context";
-import { Calendar, Plus, Download, MapPin, FileText, Camera, MessageSquare, ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Calendar, Plus, Download, MapPin, FileText, Camera, MessageSquare, ShieldCheck, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,6 +20,15 @@ import {
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/jpg"];
+const DOC_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+const PHOTO_MAX = 5 * 1024 * 1024;
+const DOC_MAX = 10 * 1024 * 1024;
+
 export default function VisitsPage() {
   const { user } = useAuth();
   const { data: visits, isLoading } = useVisits();
@@ -28,6 +38,11 @@ export default function VisitsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     district_id: "",
     visit_date: "",
@@ -48,16 +63,64 @@ export default function VisitsPage() {
 
   const visibleVisits = filterVisits(visits || []);
 
+  const addPhotos = (files: FileList | null) => {
+    if (!files) return;
+    const accepted: File[] = [];
+    Array.from(files).forEach((f) => {
+      if (!PHOTO_TYPES.includes(f.type)) { toast.error(`${f.name}: only JPEG/PNG`); return; }
+      if (f.size > PHOTO_MAX) { toast.error(`${f.name}: exceeds 5 MB`); return; }
+      accepted.push(f);
+    });
+    setPhotoFiles((prev) => [...prev, ...accepted].slice(0, 20));
+  };
+  const addDocs = (files: FileList | null) => {
+    if (!files) return;
+    const accepted: File[] = [];
+    Array.from(files).forEach((f) => {
+      if (!DOC_TYPES.includes(f.type)) { toast.error(`${f.name}: only PDF/DOCX/XLSX`); return; }
+      if (f.size > DOC_MAX) { toast.error(`${f.name}: exceeds 10 MB`); return; }
+      accepted.push(f);
+    });
+    setDocFiles((prev) => [...prev, ...accepted].slice(0, 10));
+  };
+
   const handleSubmit = async () => {
     if (!form.district_id) { toast.error("Select a district"); return; }
     if (!form.visit_date) { toast.error("Enter visit date"); return; }
+    setUploading(true);
     try {
-      await createVisit.mutateAsync(form);
+      const created = await createVisit.mutateAsync(form);
+      // Upload attachments after the visit row exists
+      const all: { f: File; kind: "photo" | "document" }[] = [
+        ...photoFiles.map((f) => ({ f, kind: "photo" as const })),
+        ...docFiles.map((f) => ({ f, kind: "document" as const })),
+      ];
+      for (const { f, kind } of all) {
+        const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `visits/${created.id}/${kind === "photo" ? "photos" : "docs"}/${crypto.randomUUID()}-${safeName}`;
+        const { error: upErr } = await supabase.storage.from("documents").upload(path, f, {
+          contentType: f.type,
+          upsert: false,
+        });
+        if (upErr) { toast.error(`${f.name}: ${upErr.message}`); continue; }
+        await supabase.from("visit_attachments").insert({
+          visit_id: created.id,
+          kind,
+          storage_path: path,
+          file_name: f.name,
+          file_size: f.size,
+          mime_type: f.type,
+          uploaded_by: currentOfficerId || null,
+        });
+      }
       toast.success("Visit logged successfully");
       setShowForm(false);
+      setPhotoFiles([]); setDocFiles([]);
       setForm({ district_id: "", visit_date: "", quarter: "Q4 2024-25", status: "completed", rating: "satisfactory", observations: "", issues_logged: 0 });
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -152,21 +215,67 @@ export default function VisitsPage() {
               <Camera className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium text-foreground">Visit Photographs</p>
               <p className="text-[10px] text-muted-foreground">Min 2, Max 20 files • JPEG/PNG • 5 MB each</p>
-              <Button variant="outline" size="sm" className="mt-2 text-xs">Upload Photos</Button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                multiple
+                className="hidden"
+                onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }}
+              />
+              <Button
+                variant="outline" size="sm" className="mt-2 text-xs"
+                onClick={() => photoInputRef.current?.click()}
+              >Upload Photos</Button>
+              {photoFiles.length > 0 && (
+                <ul className="mt-2 text-left text-[11px] space-y-1">
+                  {photoFiles.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
+                      <span className="truncate">{f.name}</span>
+                      <button onClick={() => setPhotoFiles((prev) => prev.filter((_, j) => j !== i))} className="text-destructive hover:opacity-80">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="p-4 border-2 border-dashed border-border rounded-lg text-center">
               <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium text-foreground">Supporting Documents</p>
               <p className="text-[10px] text-muted-foreground">PDF/DOCX/XLSX • Max 10 files • 10 MB each</p>
-              <Button variant="outline" size="sm" className="mt-2 text-xs">Upload Documents</Button>
+              <input
+                ref={docInputRef}
+                type="file"
+                accept=".pdf,.docx,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                multiple
+                className="hidden"
+                onChange={(e) => { addDocs(e.target.files); e.target.value = ""; }}
+              />
+              <Button
+                variant="outline" size="sm" className="mt-2 text-xs"
+                onClick={() => docInputRef.current?.click()}
+              >Upload Documents</Button>
+              {docFiles.length > 0 && (
+                <ul className="mt-2 text-left text-[11px] space-y-1">
+                  {docFiles.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
+                      <span className="truncate">{f.name}</span>
+                      <button onClick={() => setDocFiles((prev) => prev.filter((_, j) => j !== i))} className="text-destructive hover:opacity-80">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button className="bg-primary text-primary-foreground" onClick={handleSubmit} disabled={createVisit.isPending}>
-              Submit Visit Report
+            <Button className="bg-primary text-primary-foreground" onClick={handleSubmit} disabled={createVisit.isPending || uploading}>
+              {uploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</>) : "Submit Visit Report"}
             </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowForm(false)} disabled={uploading}>Cancel</Button>
           </div>
         </motion.div>
       )}
@@ -261,6 +370,27 @@ function VisitDetailSheet({
   const addComment = useAddVisitComment();
   const [text, setText] = useState("");
   const [actionTaken, setActionTaken] = useState(true);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!visit?.id) { setAttachments([]); setSignedUrls({}); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("visit_attachments")
+        .select("*")
+        .eq("visit_id", visit.id)
+        .order("created_at", { ascending: true });
+      const list = data || [];
+      setAttachments(list);
+      const urls: Record<string, string> = {};
+      for (const a of list) {
+        const { data: s } = await supabase.storage.from("documents").createSignedUrl(a.storage_path, 600);
+        if (s?.signedUrl) urls[a.id] = s.signedUrl;
+      }
+      setSignedUrls(urls);
+    })();
+  }, [visit?.id]);
 
   const handlePost = async () => {
     if (!visit) return;
@@ -321,6 +451,40 @@ function VisitDetailSheet({
                 </div>
               )}
             </div>
+
+            {attachments.length > 0 && (
+              <div className="mt-6">
+                <h4 className="gov-section-title flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" /> Photographs & Documents ({attachments.length})
+                </h4>
+                {attachments.filter(a => a.kind === "photo").length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    {attachments.filter(a => a.kind === "photo").map((a) => (
+                      <a key={a.id} href={signedUrls[a.id]} target="_blank" rel="noreferrer" className="block">
+                        {signedUrls[a.id] ? (
+                          <img src={signedUrls[a.id]} alt={a.file_name} className="w-full h-24 object-cover rounded border border-border" />
+                        ) : (
+                          <div className="w-full h-24 bg-muted rounded animate-pulse" />
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {attachments.filter(a => a.kind === "document").length > 0 && (
+                  <div className="space-y-1 mt-3">
+                    {attachments.filter(a => a.kind === "document").map((a) => (
+                      <a key={a.id} href={signedUrls[a.id]} target="_blank" rel="noreferrer"
+                        className="flex items-center justify-between gov-card p-2 text-xs hover:bg-secondary/30">
+                        <span className="flex items-center gap-2 text-foreground truncate">
+                          <FileText className="h-3.5 w-3.5 text-primary" /> {a.file_name}
+                        </span>
+                        <span className="text-muted-foreground">{(a.file_size / 1024).toFixed(0)} KB</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-6">
               <h4 className="gov-section-title flex items-center gap-2">
