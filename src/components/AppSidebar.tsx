@@ -39,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   
   { title: "AI Insights", url: "/insights", icon: Sparkles, roles: ["chief_secretary", "cmo", "system_admin", "divisional_commissioner"] },
   { title: "AI Telemetry", url: "/admin/ai-telemetry", icon: LineChart, roles: ["system_admin"] },
+  { title: "Audit Trail", url: "/admin/audit-trail", icon: Shield, roles: ["system_admin", "chief_secretary"] },
   { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Document AI", url: "/document-ai", icon: FileUp, roles: ["system_admin"] },
   { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },

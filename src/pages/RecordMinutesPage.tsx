@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjects, useCreateTask, useOfficers } from "@/hooks/use-data";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { logView } from "@/lib/audit";
 
 function useMeetingMinutes() {
   return useQuery({
@@ -369,7 +370,7 @@ export default function RecordMinutesPage() {
             >
               <div
                 className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => setExpandedId(expanded ? null : m.id)}
+                onClick={() => { if (!expanded) logView("meeting_minutes", m.id); setExpandedId(expanded ? null : m.id); }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

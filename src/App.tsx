@@ -31,6 +31,7 @@ import RecordMinutesPage from "./pages/RecordMinutesPage";
 import DocumentAIPage from "./pages/DocumentAIPage";
 import InsightsPage from "./pages/InsightsPage";
 import AITelemetryPage from "./pages/AITelemetryPage";
+import AuditTrailPage from "./pages/AuditTrailPage";
 import AccessibilityPage from "./pages/static/AccessibilityPage";
 import PrivacyPage from "./pages/static/PrivacyPage";
 import TermsPage from "./pages/static/TermsPage";
@@ -96,7 +97,7 @@ function AppRoutes() {
       <Route
         path="/meeting-minutes"
         element={
-          <RoleProtectedRoute roles={["system_admin", "chief_secretary"]}>
+          <RoleProtectedRoute roles={["system_admin", "chief_secretary", "cmo", "guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner"]}>
             <RecordMinutesPage />
           </RoleProtectedRoute>
         }
@@ -125,6 +126,10 @@ function AppRoutes() {
       <Route
         path="/admin/ai-telemetry"
         element={<RoleProtectedRoute roles={["system_admin"]}><AITelemetryPage /></RoleProtectedRoute>}
+      />
+      <Route
+        path="/admin/audit-trail"
+        element={<RoleProtectedRoute roles={["system_admin", "chief_secretary"]}><AuditTrailPage /></RoleProtectedRoute>}
       />
 
       {/* GIGW static pages — public */}

@@ -68,6 +68,48 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_officer_id: string | null
+          actor_role: string | null
+          created_at: string
+          diff: Json | null
+          district_id: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_officer_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          diff?: Json | null
+          district_id?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_officer_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          diff?: Json | null
+          district_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string

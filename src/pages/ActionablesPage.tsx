@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTasks, useDeleteTask } from "@/hooks/use-data";
+import { logView } from "@/lib/audit";
 import { useRoleFilter } from "@/hooks/use-role-filter";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
@@ -177,7 +178,7 @@ export default function ActionablesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
-                          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditTask(item); setShowForm(true); }}>
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => { logView("task", item.id); setEditTask(item); setShowForm(true); }}>
                             <Edit2 className="h-3 w-3" />
                           </Button>
                           <Button variant="outline" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id)}>
