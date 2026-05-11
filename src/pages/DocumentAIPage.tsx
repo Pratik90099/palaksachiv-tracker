@@ -132,6 +132,7 @@ export default function DocumentAIPage() {
 
       const { data, error: fnError } = await supabase.functions.invoke("process-document", {
         body: { content: truncated, mode, fileName: file.name },
+        headers: user?.email ? { "x-cso-email": user.email } : undefined,
       });
 
       if (fnError) {
