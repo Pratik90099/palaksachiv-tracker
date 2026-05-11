@@ -1,8 +1,9 @@
 import {
   Home, MapPin, ClipboardList, AlertTriangle, Users, FileText,
   Settings, LogOut, Shield, Bell, BarChart3, Globe, Calendar, Building2,
-  FolderKanban, User, HelpCircle, Tag, Activity, Trophy, BookOpen, FileUp, Sparkles
+  FolderKanban, User, HelpCircle, Tag, Activity, Trophy, BookOpen, FileUp, Sparkles, LineChart
 } from "lucide-react";
+import emblem from "@/assets/maharashtra-emblem.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
@@ -37,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Governance Scorecard", url: "/governance-scorecard", icon: Trophy, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary", "system_admin"] },
   { title: "Integration Health", url: "/integration-health", icon: Activity, roles: ["chief_secretary", "cmo", "system_admin"] },
   { title: "AI Insights", url: "/insights", icon: Sparkles, roles: ["chief_secretary", "cmo", "system_admin", "divisional_commissioner"] },
+  { title: "AI Telemetry", url: "/admin/ai-telemetry", icon: LineChart, roles: ["system_admin"] },
   { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["system_admin", "chief_secretary"] },
   { title: "Document AI", url: "/document-ai", icon: FileUp, roles: ["system_admin"] },
   { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },
@@ -67,23 +69,17 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border p-4">
         {!collapsed && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-                <Shield className="h-4 w-4 text-sidebar-primary-foreground" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-sidebar-foreground font-display">GS Portal</h2>
-                <p className="text-[10px] text-sidebar-foreground/60">Maharashtra</p>
-              </div>
+          <div className="flex items-center gap-2">
+            <img src={emblem} alt="Government of Maharashtra emblem" className="w-10 h-10 object-contain shrink-0" width={40} height={40} />
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-sidebar-foreground font-display leading-tight">Guardian Secretary Portal</h2>
+              <p className="text-[10px] text-sidebar-foreground/60">Government of Maharashtra</p>
             </div>
           </div>
         )}
         {collapsed && (
           <div className="flex justify-center">
-            <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <Shield className="h-4 w-4 text-sidebar-primary-foreground" />
-            </div>
+            <img src={emblem} alt="Government of Maharashtra emblem" className="w-8 h-8 object-contain" width={32} height={32} />
           </div>
         )}
       </SidebarHeader>
