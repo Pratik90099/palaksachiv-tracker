@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   AuthUser,
   loginAsOfficer as adapterLoginAs,
+  bindOfficerSession,
 } from "./auth-adapter";
 
 type User = AuthUser;
@@ -62,9 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   // Bootstrap an anonymous Supabase session on mount so RLS-protected
-  // INSERT/UPDATE/DELETE operations succeed.
+  // INSERT/UPDATE/DELETE operations succeed. If a cached officer is present,
+  // re-bind it to the session so officer-write policies keep passing on reload.
   useEffect(() => {
-    ensureSupabaseSession();
+    (async () => {
+      await ensureSupabaseSession();
+      if (user?.id) await bindOfficerSession(user.id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist user to sessionStorage whenever it changes

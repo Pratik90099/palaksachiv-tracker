@@ -72,6 +72,7 @@ export async function verifyLoginOtp(email: string, role: UserRole, code: string
     throw new Error(msg);
   }
   const u = r.user as Record<string, unknown>;
+  await bindOfficerSession(u.id as string);
   return {
     id: u.id as string,
     name: u.name as string,
@@ -86,10 +87,27 @@ export async function verifyLoginOtp(email: string, role: UserRole, code: string
   };
 }
 
+/** Ensure an anonymous Supabase session exists, then bind it to an officer
+ *  so RLS policies that gate writes on `current_officer_id()` will pass. */
+export async function bindOfficerSession(officerId: string): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      const { error: anonErr } = await supabase.auth.signInAnonymously();
+      if (anonErr) throw anonErr;
+    }
+    const { error } = await supabase.rpc("bind_session_officer", { _officer_id: officerId });
+    if (error) console.warn("bind_session_officer failed:", error.message);
+  } catch (err) {
+    console.warn("bindOfficerSession error:", err);
+  }
+}
+
 /** Look up an officer by ID for CS Office impersonation. */
 export async function loginAsOfficer(officerId: string): Promise<AuthUser> {
   const { data, error } = await supabase.rpc("get_officer_full", { _officer_id: officerId });
   if (error || !data) throw new Error("Officer not found or not authorized");
+  await bindOfficerSession((data as any).id);
   // Hydrate district/department names
   const { data: meta } = await supabase
     .from("officers")
