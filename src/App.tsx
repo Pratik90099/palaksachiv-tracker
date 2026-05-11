@@ -30,6 +30,15 @@ import GovernanceScorecardPage from "./pages/GovernanceScorecardPage";
 import RecordMinutesPage from "./pages/RecordMinutesPage";
 import DocumentAIPage from "./pages/DocumentAIPage";
 import InsightsPage from "./pages/InsightsPage";
+import AITelemetryPage from "./pages/AITelemetryPage";
+import AccessibilityPage from "./pages/static/AccessibilityPage";
+import PrivacyPage from "./pages/static/PrivacyPage";
+import TermsPage from "./pages/static/TermsPage";
+import CopyrightPage from "./pages/static/CopyrightPage";
+import HyperlinkingPage from "./pages/static/HyperlinkingPage";
+import SitemapPage from "./pages/static/SitemapPage";
+import ContactPage from "./pages/static/ContactPage";
+import UserManualPage from "./pages/static/UserManualPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -112,6 +121,21 @@ function AppRoutes() {
           </RoleProtectedRoute>
         }
       />
+
+      <Route
+        path="/admin/ai-telemetry"
+        element={<RoleProtectedRoute roles={["system_admin"]}><AITelemetryPage /></RoleProtectedRoute>}
+      />
+
+      {/* GIGW static pages — public */}
+      <Route path="/accessibility-statement" element={<AccessibilityPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPage />} />
+      <Route path="/terms-of-use" element={<TermsPage />} />
+      <Route path="/copyright-policy" element={<CopyrightPage />} />
+      <Route path="/hyperlinking-policy" element={<HyperlinkingPage />} />
+      <Route path="/sitemap" element={<SitemapPage />} />
+      <Route path="/contact-us" element={<ContactPage />} />
+      <Route path="/help/user-manual" element={<UserManualPage />} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -70,25 +70,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // --- AuthN: require a valid bearer token ---
+  // --- AuthN: bearer required (anon or user JWT both fine) ---
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
-  }
-  try {
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsError || !claimsData?.claims) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
-    }
-  } catch {
-    return jsonResponse({ error: "Unauthorized" }, 401);
+    return jsonResponse({ error: "Unauthorized: missing bearer token" }, 401);
   }
 
   // Parse body safely

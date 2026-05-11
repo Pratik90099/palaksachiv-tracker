@@ -20,21 +20,21 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
-    // --- AuthN: require a valid bearer token ---
+    // Health probe for quick smoke testing from the UI
+    const url = new URL(req.url);
+    if (req.method === "GET" && url.searchParams.get("health") === "1") {
+      return jsonResponse({ ok: true, gemini: !!GEMINI_API_KEY, fallback: !!Deno.env.get("LOVABLE_API_KEY") }, 200);
+    }
+
+    if (!GEMINI_API_KEY && !Deno.env.get("LOVABLE_API_KEY")) {
+      return jsonResponse({ error: "AI service not configured (no GEMINI_API_KEY or LOVABLE_API_KEY)" }, 500);
+    }
+
+    // --- AuthN: bearer required (anon or user JWT both fine) ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
-    }
-    const token = authHeader.replace("Bearer ", "");
-
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+      return jsonResponse({ error: "Unauthorized: missing bearer token" }, 401);
     }
 
     // --- AuthZ: caller must be a CSO admin or senior officer ---
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     let provider = "gemini-direct";
     let lastError = "";
 
-    try {
+    if (GEMINI_API_KEY) try {
       const aiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {

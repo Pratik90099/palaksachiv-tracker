@@ -128,6 +128,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-3 focus:py-2 focus:rounded-md focus:shadow-lg">
+        Skip to main content
+      </a>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
@@ -175,7 +178,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               )}
             </div>
           </header>
-          <main className="flex-1 overflow-auto bg-background">
+          <main id="main-content" tabIndex={-1} className="flex-1 overflow-auto bg-background">
             {children}
           </main>
           <SiteFooter />
