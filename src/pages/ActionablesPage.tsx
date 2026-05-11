@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTasks, useDeleteTask } from "@/hooks/use-data";
+import { logView } from "@/lib/audit";
 import { useRoleFilter } from "@/hooks/use-role-filter";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
