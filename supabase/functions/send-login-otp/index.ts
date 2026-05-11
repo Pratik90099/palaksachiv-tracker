@@ -42,20 +42,35 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { to, code, name } = await req.json();
-    if (!to || !code) {
-      return new Response(JSON.stringify({ error: "to and code required" }), {
+    const { otp_id, code, name } = await req.json();
+    if (!otp_id || !code) {
+      return new Response(JSON.stringify({ error: "otp_id and code required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_MAIL_API_KEY = Deno.env.get("GOOGLE_MAIL_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
     if (!GOOGLE_MAIL_API_KEY) throw new Error("GOOGLE_MAIL_API_KEY missing");
 
+    // Look up the recipient email & validate the OTP record exists and is unconsumed.
+    // This prevents the function from being abused to send arbitrary emails.
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.45.0");
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    const { data: lookup, error: lookupErr } = await admin.rpc("consume_pending_otp_for_dispatch", { _otp_id: otp_id });
+    if (lookupErr || !lookup || lookup.found !== true) {
+      return new Response(JSON.stringify({ error: "invalid_otp_id" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const to = lookup.email as string;
+    const recipientName = (lookup.recipient_name as string) || String(name || "");
+
     const subject = `Your GS Portal sign-in code: ${code}`;
-    const html = buildHtml(String(code), String(name || ""));
+    const html = buildHtml(String(code), recipientName);
 
     const rfc2822 = [
       `To: ${to}`,
