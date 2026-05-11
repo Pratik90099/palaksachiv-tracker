@@ -65,27 +65,24 @@ async function uploadWithProgress(
     .createSignedUploadUrl(path);
   if (error || !data) throw error || new Error("Could not create upload URL");
 
+  const url = /^https?:\/\//i.test(data.signedUrl)
+    ? data.signedUrl
+    : `${SUPABASE_URL}/storage/v1${data.signedUrl.startsWith("/") ? "" : "/"}${data.signedUrl}`;
+
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", `${SUPABASE_URL}/storage/v1${data.signedUrl.startsWith("/") ? "" : "/"}${data.signedUrl}`.replace(/\/{2,}/g, "/").replace(":/", "://"));
-    // The signedUrl returned from supabase-js already includes the path + token;
-    // we PUT to /storage/v1/<signedUrl>. supabase-js v2 returns signedUrl beginning
-    // with "object/upload/sign/...". Build a clean absolute URL:
-    const absolute = `${SUPABASE_URL}/storage/v1/${data.signedUrl.replace(/^\/+/, "")}`;
-    xhr.abort();
-    const x = new XMLHttpRequest();
-    x.open("PUT", absolute);
-    x.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    x.setRequestHeader("x-upsert", "false");
-    x.upload.onprogress = (e) => {
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
-    x.onload = () => {
-      if (x.status >= 200 && x.status < 300) resolve();
-      else reject(new Error(`Upload failed (${x.status}): ${x.responseText || x.statusText}`));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText || xhr.statusText}`));
     };
-    x.onerror = () => reject(new Error("Network error during upload"));
-    x.send(file);
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.send(file);
   });
 }
 
