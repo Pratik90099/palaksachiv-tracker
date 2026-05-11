@@ -1,49 +1,34 @@
-## Security Hardening + Logo Replacement Plan
+# Plan
 
-### 1. Replace Maharashtra State Emblem
+## 1. Open Task Management & Meeting Minutes to all roles
 
-- Copy `user-uploads://statelogo.png` → `src/assets/maharashtra-emblem.png` (overwrite existing). Used by `AppSidebar`, `LoginPage`, `SiteFooter` — no code changes needed.
+**Sidebar (`src/components/AppSidebar.tsx`)** — extend `roles` arrays:
+- **Actionables** (task management): add `system_admin` (already covers other officer roles).
+- **Meeting Minutes** (`/meeting-minutes`): currently only `system_admin` + `chief_secretary`. Expand to all roles: `guardian_secretary`, `department_secretary`, `district_collector`, `divisional_commissioner`, `chief_secretary`, `cmo`, `system_admin`.
 
-### 2. Fix Security Findings (Migration)
+**Page-level access**
+- `RecordMinutesPage.tsx` & `ActionablesPage.tsx`: verify there is no role-gate that blocks non-CS users. If a guard exists, relax it so all authenticated officer roles can view and create.
+- Existing `useRoleFilter` will scope visible records to each role's district/department/division automatically — no changes needed there.
 
-**a) `ai_call_logs` — caller email exposure (error)**
+Note: this is UI/access only; RLS policies already allow writes by any officer with `current_officer_id() IS NOT NULL`, so backend stays as-is.
 
-- Drop policy `Auth read ai_call_logs`.
-- New policy: SELECT only when `has_role(auth.uid(), 'admin')`.
-- Update `AITelemetryPage.tsx` (already gated to `system_admin` in UI) — no change needed; queries continue to work for admins.
+## 2. Help page cleanup (`src/pages/HelpPage.tsx`)
 
-**b) `visits` — publicly readable (warn)**
+- **Remove** the "NIC Portal" entry (and the now-unused `ExternalLink` import).
+- **Update Email Support**:
+  - Title: `Email Support`
+  - Primary: `cs@maharashtra.gov.in`
+  - CC: `bavipratik@gmail.com`, `rishishirke65@gmail.com`
+  - `mailto:` href: `mailto:cs@maharashtra.gov.in?cc=bavipratik@gmail.com,rishishirke65@gmail.com`
+- **Update Helpdesk**:
+  - Display: `022-2202-5042 (Mon–Sat, 10 AM – 6 PM)`
+  - href: `tel:+912222025042`
 
-- Drop `Public can read visits`.
-- New policy: SELECT requires `authenticated` role.
+## 3. Contact / Footer alignment
 
-**c) `realtime.messages` — unscoped subscriptions (warn)**
+- `src/pages/static/ContactPage.tsx`: add the same email + helpdesk number under "Helpline" so the static GIGW contact page matches.
+- `src/components/SiteFooter.tsx`: if it shows a support email/phone, update to the new values; otherwise leave as-is.
 
-- Drop existing `Authenticated realtime notifications` policy on `realtime.messages`.
-- New policy restricting topic to either:
-  - `topic = 'notifications:' || current_officer_id()::text`, or
-  - admin role.
-- Update notification subscribe code (in `use-notifications.ts`) to use per-officer topic name `notifications:<officer_id>` and have the notification publisher broadcast on that topic.
-
-**d) `SUPA_rls_policy_always_true` (warn)**
-
-- This flags every `Auth insert/update/delete` policy that uses `auth.role() = 'authenticated'` with `USING/WITH CHECK true`-equivalent.
-- Tighten the highest-risk write policies:
-  - `ai_insights`, `document_uploads`, `meeting_minutes`, `notifications`, `projects`, `tasks`, `visits`, link tables (`project_*`, `task_*`): keep authenticated-only writes but add `has_role(auth.uid(),'admin') OR current_officer_id() IS NOT NULL` so anonymous-but-unbound sessions cannot write.
-  - For the most sensitive (`ai_insights`, `meeting_minutes`, `notifications` INSERT/UPDATE/DELETE): require `has_role(auth.uid(),'admin')` OR scope to the officer's role tier.
-- Note: full role-scoped write policies are tracked under PR-4 (per-user JWT). This pass closes the "always true" linter warning by adding the `current_officer_id() IS NOT NULL` gate everywhere, which is a safe interim hardening.
-
-### 3. Verification
-
-- Run security scanner after migration applies.
-- Re-test: AI Telemetry page (admin), Visits page (logged-in), Notifications realtime (logged-in officer sees own only).
-
-4) remove integration health page as integration will not be done  
-
-
-### Files Changed
-
-- `src/assets/maharashtra-emblem.png` (replaced via copy)
-- 1 migration file (RLS changes)
-- `src/hooks/use-notifications.ts` (per-officer topic)
-- Wherever notifications are inserted with broadcast (publisher side) — switch to per-officer topic
+## Out of scope
+- No DB/RLS changes.
+- No new features; existing minutes/tasks UIs are reused.
