@@ -177,6 +177,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <main className="flex-1 overflow-auto bg-background">
             {children}
           </main>
+          <SiteFooter />
         </div>
       </div>
     </SidebarProvider>
