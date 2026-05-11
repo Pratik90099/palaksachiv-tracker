@@ -469,7 +469,62 @@ export function useCreateVisit() {
   });
 }
 
-// Delete Project
+// Visit Comments
+export function useVisitComments(visitId: string | null) {
+  return useQuery({
+    queryKey: ["visit_comments", visitId],
+    enabled: !!visitId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("visit_comments")
+        .select(`*, officers(id, name, designation, role)`)
+        .eq("visit_id", visitId as string)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useAddVisitComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      visit_id: string;
+      author_officer_id: string | null;
+      author_role: string | null;
+      comment_text: string;
+      is_action_taken: boolean;
+      notify_officer_id?: string | null;
+      notify_title?: string;
+      notify_message?: string;
+    }) => {
+      const { notify_officer_id, notify_title, notify_message, ...payload } = input;
+      const { data, error } = await supabase
+        .from("visit_comments")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      if (notify_officer_id) {
+        await supabase.from("notifications").insert({
+          recipient_officer_id: notify_officer_id,
+          type: "info",
+          title: notify_title || "New visit response",
+          message: notify_message || "A response was posted on your visit report.",
+          link: "/visits",
+        });
+      }
+      return data;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["visit_comments", vars.visit_id] });
+      qc.invalidateQueries({ queryKey: ["visits"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
