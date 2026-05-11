@@ -21,7 +21,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default function UserManagementPage() {
-  const { data: officers, isLoading } = useOfficers();
+  const { data: officers, isLoading } = useOfficersAdmin();
   const deleteOfficer = useDeleteOfficer();
   const { user, impersonateOfficer } = useAuth();
   const navigate = useNavigate();
