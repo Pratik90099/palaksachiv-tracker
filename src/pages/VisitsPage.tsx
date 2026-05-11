@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   useVisits,
   useCreateVisit,
@@ -8,7 +8,8 @@ import {
 } from "@/hooks/use-data";
 import { useRoleFilter } from "@/hooks/use-role-filter";
 import { useAuth } from "@/lib/auth-context";
-import { Calendar, Plus, Download, MapPin, FileText, Camera, MessageSquare, ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Calendar, Plus, Download, MapPin, FileText, Camera, MessageSquare, ShieldCheck, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +19,15 @@ import {
 } from "@/components/ui/sheet";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/jpg"];
+const DOC_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+const PHOTO_MAX = 5 * 1024 * 1024;
+const DOC_MAX = 10 * 1024 * 1024;
 
 export default function VisitsPage() {
   const { user } = useAuth();
