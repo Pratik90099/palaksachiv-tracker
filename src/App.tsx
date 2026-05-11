@@ -97,7 +97,7 @@ function AppRoutes() {
       <Route
         path="/meeting-minutes"
         element={
-          <RoleProtectedRoute roles={["system_admin", "chief_secretary"]}>
+          <RoleProtectedRoute roles={["system_admin", "chief_secretary", "cmo", "guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner"]}>
             <RecordMinutesPage />
           </RoleProtectedRoute>
         }
