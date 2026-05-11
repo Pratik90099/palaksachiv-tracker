@@ -1,62 +1,52 @@
-## Goal
+## Diagnosed root causes
 
-Let District Collectors review visit reports filed for their district by the Guardian Secretary and respond with "Action Taken" comments.
+**1. Visit RLS error (`new row violates row-level security policy for table "visits"`)**
+After OTP login, the app signs in anonymously to Supabase but **never calls `bind_session_officer(officer_id)`**. Every officer-write RLS policy requires `current_officer_id() IS NOT NULL`, which returns NULL → every officer insert/update/delete (visits, projects, tasks, comments, notifications, document_uploads, ai_insights, meeting_minutes) is blocked. This is the single biggest bug in the app right now.
 
-## Findings
+**2. "Failed to send a request to the Edge Function" (Insights & Document AI)**
+Both edge functions send an `x-cso-email` custom header from the browser, but their CORS `Access-Control-Allow-Headers` lists **do not include `x-cso-email`**. The browser's preflight rejects the request before the function ever runs — hence the generic "Failed to send a request" error.
 
-- `visits` table already records `district_id`, `gs_id`, `observations`, `rating`. RLS allows any authenticated user to read.
-- `useRoleFilter` already restricts visit visibility to the Collector's own district when `role === "district_collector"`.
-- Collector role is **not** currently in the sidebar `Visit Management` (`/visits`) entry — only Guardian Secretary, CS, CMO. So Collectors can't open the page today.
-- `VisitsPage.tsx` shows a flat table with no detail/comment UI.
-- No `visit_comments` table exists.
+**3. Visit-report photos & documents do nothing**
+In `VisitsPage.tsx`, the "Upload Photos" and "Upload Documents" buttons are decorative placeholders with no handler, no storage upload, and no DB linkage.
 
-## Plan
+## Fixes (scoped to what you reported)
 
-### 1. Database (migration)
+### A. Bind officer to Supabase session after login
+- In `auth-adapter.ts` `verifyLoginOtp` (and `loginAsOfficer` for impersonation), after we know the officer id:
+  - `await supabase.auth.signInAnonymously()` if no session yet.
+  - `await supabase.rpc("bind_session_officer", { _officer_id: u.id })`.
+- In `auth-context.tsx` `ensureSupabaseSession`, also re-bind on reload using the cached user.id so that returning users keep officer-write privileges.
+- Net effect: visits, projects, tasks, comments, notifications, etc. will all insert successfully.
 
-Create `public.visit_comments`:
+### B. Fix CORS on the two AI edge functions
+- `supabase/functions/generate-insights/index.ts` and `supabase/functions/process-document/index.ts`: add `x-cso-email` to `Access-Control-Allow-Headers`. Redeploy both functions.
+- After fix, "Generate Insights" and "Process Document" calls reach the function instead of failing at preflight.
 
-- `visit_id` (FK → visits, cascade delete), `author_officer_id` (FK officers), `author_role`, `comment_text`, `is_action_taken` boolean default true, `created_at`.
-- RLS: authenticated read all; insert allowed when `current_officer_id() IS NOT NULL OR has_role(...,'admin')` (mirrors the rest of the schema); update/delete only by author or admin.
-- Add audit trigger reusing `log_entity_change('visit_comments')`.
-- Add index on `visit_id`.
+### C. Make visit photo & document upload work
+- Add a new `visit_attachments` table (`visit_id`, `kind enum 'photo'|'document'`, `storage_path`, `file_name`, `file_size`, `mime_type`, `uploaded_by`, `created_at`). Authenticated read; officer/admin insert+delete via the standard `current_officer_id()` policy. Reuse the existing private `documents` storage bucket; store under `visits/{visit_id}/...`.
+- In `VisitsPage.tsx`:
+  - Replace the two placeholder cards with real `<input type="file" multiple>` controls.
+  - Photos: accept `image/jpeg,image/png`, max 20 files, 5 MB each.
+  - Docs: accept `.pdf,.docx,.xlsx`, max 10 files, 10 MB each.
+  - Upload to `documents` bucket via `supabase.storage.from('documents').upload(...)`, then insert `visit_attachments` rows.
+  - On the `VisitDetailSheet`, show a thumbnail grid for photos (signed URLs) and a download list for documents.
 
-### 2. Sidebar visibility
+## Out of scope for this turn
 
-In `src/components/AppSidebar.tsx`, add `district_collector` to the `Visit Management` roles array so Collectors see the page.
+Your request also says "fix all the buttons / functions in this whole website end-to-end". That's hundreds of buttons across 30+ pages and not actionable as a single change without first knowing which actually misbehave. After the three fixes above ship, the visible breakage from missing officer binding alone disappears across most pages (it was the silent cause of many "save fails" you may have seen). I'll ask you to point me at any specific buttons that still don't work and I'll batch-fix those next.
 
-### 3. Visits page enhancements (`src/pages/VisitsPage.tsx`)
+## Technical details (for reference)
 
-- Apply `useRoleFilter().filterVisits` so Collectors only see visits for their assigned district (Guardian Sec already district-scoped, CS/CMO see all).
-- Hide the "Log New Visit" button unless role is `guardian_secretary`, `system_admin`, or `chief_secretary` (Collectors only respond, they don't log).
-- Make each table row clickable → opens a Drawer/Dialog with full visit details (district, date, quarter, status, rating, issues, observations, filing GS name).
-- Inside the drawer, show a chronological list of `visit_comments` (author name + role badge + timestamp + comment).
-- Add a comment composer at the bottom of the drawer:
-  - Visible to `district_collector` (for the matching district), `chief_secretary`, `cmo`, `system_admin`.
-  - Textarea + checkbox "Mark as Action Taken" (default checked) + Submit button.
-  - On submit, insert into `visit_comments` with `author_officer_id = currentOfficerId`, `author_role = user.role`.
-- Add a small "💬 N" badge column on each visit row showing comment count.
+```text
+Login flow after fix:
+  verify_login_otp  →  officer
+  └── signInAnonymously (if needed)
+      └── rpc bind_session_officer(officer.id)
+          └── session_officer_map row → current_officer_id() works
+              └── all officer-write RLS policies pass
+```
 
-### 4. Data hooks (`src/hooks/use-data.ts`)
+CORS allowlist (both functions):
+`authorization, x-client-info, apikey, content-type, x-cso-email, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version`
 
-- `useVisitComments(visitId)` — fetch comments with officer name join.
-- `useAddVisitComment()` — mutation, invalidates the visit + comments query.
-- Extend `useVisits` select to include `guardian_secretaries(name)` and a `comments_count` aggregate.
-
-### 5. Notifications
-
-On comment insert by Collector, fire a `notifications` row to the visit's `gs_id` (so the Guardian Secretary sees the response under bell icon). Reuse existing notifications table — done client-side after the comment insert.
-
-### 6. Verify
-
-- Log in as Guardian Sec → file a visit for their district.
-- Switch to that district's Collector → open `/visits`, see only their district, open the visit, post an "Action Taken" comment.
-- Switch back to Guardian Sec → notification appears, comment visible in drawer.
-- CS/CMO can read all comments but composer is also enabled for them as oversight.
-
-## Out of scope
-
-- Photo / document uploads on visits (the existing dropzones remain stubs).
-- Editing or deleting comments after submit — keep audit trail intact.
-- Marathi translation of new UI strings (English only for v1).
-- ensure notification is activated for all the activites where necessary
+Storage path convention: `visits/{visit_id}/photos/{uuid}-{filename}` and `visits/{visit_id}/docs/{uuid}-{filename}` in the existing private `documents` bucket; UI fetches via `createSignedUrl(60)`.

@@ -952,6 +952,42 @@ export type Database = {
         }
         Relationships: []
       }
+      visit_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number
+          id: string
+          kind: string
+          mime_type: string | null
+          storage_path: string
+          uploaded_by: string | null
+          visit_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number
+          id?: string
+          kind: string
+          mime_type?: string | null
+          storage_path: string
+          uploaded_by?: string | null
+          visit_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          storage_path?: string
+          uploaded_by?: string | null
+          visit_id?: string
+        }
+        Relationships: []
+      }
       visit_comments: {
         Row: {
           author_officer_id: string | null
