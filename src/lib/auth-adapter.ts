@@ -39,13 +39,14 @@ export async function requestLoginOtp(email: string, role: UserRole): Promise<Ot
     return { sent: true, bypass: true };
   }
 
-  // Dispatch real email via Gmail edge function.
+  // Dispatch real email via Gmail edge function. The edge function looks up
+  // the recipient email from the OTP record (otp_id) — we never trust client-supplied "to".
   const plainCode = r.plain_code as string | undefined;
   const recipient = r.recipient_email as string | undefined;
-  const recipientName = r.recipient_name as string | undefined;
-  if (plainCode && recipient) {
+  const otpId = r.otp_id as string | undefined;
+  if (plainCode && otpId) {
     supabase.functions
-      .invoke("send-login-otp", { body: { to: recipient, code: plainCode, name: recipientName } })
+      .invoke("send-login-otp", { body: { otp_id: otpId, code: plainCode } })
       .catch((e) => console.error("send-login-otp invoke failed", e));
   }
 
