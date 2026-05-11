@@ -1,4 +1,19 @@
-// Sends OTP via Gmail (connector gateway).
+// ============================================================
+// OTP DELIVERY — currently routed via Gmail (connector gateway).
+//
+// EXTERNAL CLOUD EMAIL PROVIDER SWAP-IN:
+// To switch to your own external email provider (SES, SendGrid,
+// Postmark, Mailgun, etc.) without breaking login:
+//   1. Add provider API key as a secret (e.g. EXTERNAL_EMAIL_API_KEY).
+//   2. Replace ONLY the `fetch(...)` block that calls GATEWAY_URL
+//      below — keep the surrounding logic intact:
+//        - Same input contract: { otp_id, code }
+//        - Same DB lookup via consume_pending_otp_for_dispatch
+//          (server-side recipient resolution prevents email-relay
+//          abuse — never trust client-supplied "to").
+//        - Same buildHtml() / buildText() bodies.
+//   3. No frontend or DB changes are needed.
+// ============================================================
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
 
 const corsHeaders = {
