@@ -159,17 +159,37 @@ export function useGuardianSecretaries() {
   });
 }
 
-// Officers
+// Officers (safe columns only — phone/email/parichay_uid/admin flags require admin RPC)
 export function useOfficers() {
   return useQuery({
     queryKey: ["officers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("officers")
-        .select(`*, districts(id, name), departments(id, name, short_name)`)
+        .select(`id, name, designation, role, district_id, department_id, is_active, created_at, updated_at, districts(id, name), departments(id, name, short_name)`)
         .order("name");
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+// Admin-only: full officer rows including email/phone/parichay/admin flags
+export function useOfficersAdmin() {
+  return useQuery({
+    queryKey: ["officers_admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_officers_admin");
+      if (error) throw error;
+      // Hydrate district/department names for the admin table
+      const ids = (data || []) as any[];
+      if (ids.length === 0) return [];
+      const { data: full } = await supabase
+        .from("officers")
+        .select(`id, districts(id, name), departments(id, name, short_name)`)
+        .in("id", ids.map((o) => o.id));
+      const byId = new Map((full || []).map((r: any) => [r.id, r]));
+      return ids.map((o: any) => ({ ...o, districts: byId.get(o.id)?.districts, departments: byId.get(o.id)?.departments }));
     },
   });
 }
