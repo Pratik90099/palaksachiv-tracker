@@ -36,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "MIS Reports", url: "/reports", icon: FileText, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary"] },
   { title: "Departments", url: "/departments", icon: Building2, roles: ["chief_secretary", "cmo", "department_secretary"] },
   { title: "Governance Scorecard", url: "/governance-scorecard", icon: Trophy, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary", "system_admin"] },
-  { title: "Integration Health", url: "/integration-health", icon: Activity, roles: ["chief_secretary", "cmo", "system_admin"] },
+  
   { title: "AI Insights", url: "/insights", icon: Sparkles, roles: ["chief_secretary", "cmo", "system_admin", "divisional_commissioner"] },
   { title: "AI Telemetry", url: "/admin/ai-telemetry", icon: LineChart, roles: ["system_admin"] },
   { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["system_admin", "chief_secretary"] },
