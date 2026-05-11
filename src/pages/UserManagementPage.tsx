@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
-import { useOfficers, useDeleteOfficer } from "@/hooks/use-data";
+import { useOfficersAdmin, useDeleteOfficer } from "@/hooks/use-data";
 import { OfficerFormDialog } from "@/components/OfficerFormDialog";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default function UserManagementPage() {
-  const { data: officers, isLoading } = useOfficers();
+  const { data: officers, isLoading } = useOfficersAdmin();
   const deleteOfficer = useDeleteOfficer();
   const { user, impersonateOfficer } = useAuth();
   const navigate = useNavigate();

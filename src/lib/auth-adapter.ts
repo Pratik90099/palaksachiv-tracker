@@ -88,22 +88,24 @@ export async function verifyLoginOtp(email: string, role: UserRole, code: string
 
 /** Look up an officer by ID for CS Office impersonation. */
 export async function loginAsOfficer(officerId: string): Promise<AuthUser> {
-  const { data, error } = await supabase
+  const { data, error } = await supabase.rpc("get_officer_full", { _officer_id: officerId });
+  if (error || !data) throw new Error("Officer not found or not authorized");
+  // Hydrate district/department names
+  const { data: meta } = await supabase
     .from("officers")
-    .select("*, districts(name, division), departments(name, short_name)")
+    .select("districts(name, division), departments(name, short_name)")
     .eq("id", officerId)
-    .single();
-  if (error || !data) throw new Error("Officer not found");
+    .maybeSingle();
   return {
-    id: data.id,
-    name: data.name,
-    designation: data.designation || "",
-    role: data.role as UserRole,
-    email: data.email || "",
-    district: (data as any).districts?.name,
-    division: (data as any).districts?.division,
-    department: (data as any).departments?.short_name || (data as any).departments?.name,
-    is_cso_admin: data.is_cso_admin,
+    id: (data as any).id,
+    name: (data as any).name,
+    designation: (data as any).designation || "",
+    role: (data as any).role as UserRole,
+    email: (data as any).email || "",
+    district: (meta as any)?.districts?.name,
+    division: (meta as any)?.districts?.division,
+    department: (meta as any)?.departments?.short_name || (meta as any)?.departments?.name,
+    is_cso_admin: (data as any).is_cso_admin,
     phone: (data as any).phone || undefined,
   };
 }

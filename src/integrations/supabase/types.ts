@@ -1197,6 +1197,56 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_officer_full: {
+        Args: { _officer_id: string }
+        Returns: {
+          created_at: string
+          department_id: string | null
+          designation: string | null
+          district_id: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          is_cso_admin: boolean
+          is_palak_sachiv: boolean
+          name: string
+          parichay_uid: string | null
+          phone: string | null
+          role: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "officers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_officers_admin: {
+        Args: never
+        Returns: {
+          created_at: string
+          department_id: string | null
+          designation: string | null
+          district_id: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          is_cso_admin: boolean
+          is_palak_sachiv: boolean
+          name: string
+          parichay_uid: string | null
+          phone: string | null
+          role: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "officers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_visitor_counts: { Args: never; Returns: Json }
       has_role: {
         Args: {

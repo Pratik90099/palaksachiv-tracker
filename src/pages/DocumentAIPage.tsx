@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateProject, useCreateTask } from "@/hooks/use-data";
+import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -65,6 +66,7 @@ function useDocumentUploads() {
 }
 
 export default function DocumentAIPage() {
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<ProcessingMode>("summarize");
   const [processing, setProcessing] = useState(false);
@@ -132,6 +134,7 @@ export default function DocumentAIPage() {
 
       const { data, error: fnError } = await supabase.functions.invoke("process-document", {
         body: { content: truncated, mode, fileName: file.name },
+        headers: user?.email ? { "x-cso-email": user.email } : undefined,
       });
 
       if (fnError) {
