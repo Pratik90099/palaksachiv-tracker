@@ -70,10 +70,34 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // --- AuthN: bearer required (anon or user JWT both fine) ---
+  // --- AuthN: bearer required ---
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return jsonResponse({ error: "Unauthorized: missing bearer token" }, 401);
+  }
+
+  // --- AuthZ: caller must be a CSO admin / system_admin / chief_secretary ---
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const callerEmail = (req.headers.get("x-cso-email") || "").toLowerCase().trim();
+  if (!callerEmail) {
+    return jsonResponse({ error: "Forbidden: caller identity missing" }, 403);
+  }
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+  const { data: officer, error: officerError } = await admin
+    .from("officers")
+    .select("id, role, is_cso_admin, is_active")
+    .ilike("email", callerEmail)
+    .maybeSingle();
+  if (officerError) {
+    console.error("[process-document] officer lookup error:", officerError);
+    return jsonResponse({ error: "Authorization check failed" }, 500);
+  }
+  const allowedRoles = new Set(["chief_secretary", "system_admin"]);
+  const isAuthorized = !!officer && officer.is_active && (officer.is_cso_admin || allowedRoles.has(officer.role));
+  if (!isAuthorized) {
+    console.warn(`[process-document] forbidden caller=${callerEmail}`);
+    return jsonResponse({ error: "Forbidden: CSO admin role required" }, 403);
   }
 
   // Parse body safely
