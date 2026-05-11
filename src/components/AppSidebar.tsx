@@ -26,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Projects", url: "/projects", icon: FolderKanban, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Category Dashboard", url: "/category-dashboard", icon: Tag, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "District Heat Map", url: "/heat-map", icon: MapPin, roles: ["chief_secretary", "cmo", "divisional_commissioner", "guardian_secretary"] },
-  { title: "Actionables", url: "/actionables", icon: ClipboardList, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo"] },
+  { title: "Actionables", url: "/actionables", icon: ClipboardList, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Visit Management", url: "/visits", icon: Calendar, roles: ["guardian_secretary", "district_collector", "chief_secretary", "cmo"] },
   { title: "Visit Compliance", url: "/compliance", icon: BarChart3, roles: ["chief_secretary", "cmo", "divisional_commissioner"] },
   { title: "Critical Issues", url: "/critical-issues", icon: AlertTriangle, roles: ["chief_secretary", "cmo", "guardian_secretary"] },
@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   
   { title: "AI Insights", url: "/insights", icon: Sparkles, roles: ["chief_secretary", "cmo", "system_admin", "divisional_commissioner"] },
   { title: "AI Telemetry", url: "/admin/ai-telemetry", icon: LineChart, roles: ["system_admin"] },
-  { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["system_admin", "chief_secretary"] },
+  { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Document AI", url: "/document-ai", icon: FileUp, roles: ["system_admin"] },
   { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },
   { title: "My Profile", url: "/profile", icon: User, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },

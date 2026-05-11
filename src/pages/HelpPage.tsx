@@ -1,11 +1,14 @@
-import { HelpCircle, Mail, Phone, FileText, ExternalLink } from "lucide-react";
+import { HelpCircle, Mail, Phone, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
+const SUPPORT_EMAIL = "cs@maharashtra.gov.in";
+const SUPPORT_CC = ["bavipratik@gmail.com", "rishishirke65@gmail.com"];
+const MAILTO = `mailto:${SUPPORT_EMAIL}?cc=${SUPPORT_CC.join(",")}`;
+
 const HELP_ITEMS = [
-  { icon: FileText, title: "User Manual", desc: "Download the GS Portal user guide (PDF)", action: "#" },
-  { icon: Mail, title: "Email Support", desc: "gsportal.support@maharashtra.gov.in", action: "mailto:gsportal.support@maharashtra.gov.in" },
-  { icon: Phone, title: "Helpdesk", desc: "+91-22-2202-XXXX (Mon–Sat, 10 AM – 6 PM)", action: "tel:+912222020000" },
-  { icon: ExternalLink, title: "NIC Portal", desc: "National Informatics Centre – Maharashtra", action: "https://maharashtra.nic.in" },
+  { icon: FileText, title: "User Manual", desc: "Open the GS Portal user guide", action: "/help/user-manual" },
+  { icon: Mail, title: "Email Support", desc: `${SUPPORT_EMAIL} (CC: ${SUPPORT_CC.join(", ")})`, action: MAILTO },
+  { icon: Phone, title: "Helpdesk", desc: "022-2202-5042 (Mon–Sat, 10 AM – 6 PM)", action: "tel:+912222025042" },
 ];
 
 export default function HelpPage() {
@@ -21,8 +24,6 @@ export default function HelpPage() {
           <a
             key={item.title}
             href={item.action}
-            target={item.action.startsWith("http") ? "_blank" : undefined}
-            rel="noopener noreferrer"
             className="gov-card-elevated flex items-center gap-4 hover:bg-secondary/50 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

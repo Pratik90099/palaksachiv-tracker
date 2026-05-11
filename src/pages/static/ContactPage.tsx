@@ -12,7 +12,11 @@ export default function ContactPage() {
       </p>
 
       <h2>Helpline</h2>
-      <p>For technical support with the Guardian Secretary Portal, please raise an issue from within the portal using the "Report a problem" option, or write to the CSO IT cell.</p>
+      <p>
+        Helpdesk: <a href="tel:+912222025042">022-2202-5042</a> (Mon–Sat, 10 AM – 6 PM)<br />
+        Email: <a href="mailto:cs@maharashtra.gov.in?cc=bavipratik@gmail.com,rishishirke65@gmail.com">cs@maharashtra.gov.in</a> (CC: bavipratik@gmail.com, rishishirke65@gmail.com)
+      </p>
+      <p>For technical support with the Guardian Secretary Portal, please use the contact details above or raise an issue from within the portal.</p>
 
       <h2>Grievance Officer</h2>
       <p>The grievance officer for this portal is the Joint Secretary (Coordination), Chief Secretary's Office.</p>
