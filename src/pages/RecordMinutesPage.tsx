@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjects, useCreateTask, useOfficers } from "@/hooks/use-data";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { logView } from "@/lib/audit";
 
 function useMeetingMinutes() {
   return useQuery({
