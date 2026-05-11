@@ -66,6 +66,7 @@ function useDocumentUploads() {
 }
 
 export default function DocumentAIPage() {
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<ProcessingMode>("summarize");
   const [processing, setProcessing] = useState(false);
