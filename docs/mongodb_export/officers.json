@@ -1,0 +1,2037 @@
+[
+  {
+    "name": "Aanchal Goyal",
+    "designation": "District Collector",
+    "email": "aanchal010790@gmail.com",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9023551003",
+    "is_palak_sachiv": false,
+    "_id": "7333d0b5-339f-4c6c-a7f6-d4148d1e7cee",
+    "district": {
+      "_id": "1e11049f-5392-4404-b5c6-5721f5547523",
+      "name": "Mumbai City",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Anand Subhashlal Bhandari",
+    "designation": "CEO Zilla Parishad",
+    "email": "ceozp.ahmednagar@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8888337533",
+    "is_palak_sachiv": false,
+    "_id": "d181bbe1-5b65-4ac5-8e32-0d01f0e6f410",
+    "district": {
+      "_id": "49259184-1c00-4327-9227-274cdee97655",
+      "name": "Ahilyanagar",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Ashima Mittal",
+    "designation": "District Collector",
+    "email": "collector.jalna@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9371193755",
+    "is_palak_sachiv": false,
+    "_id": "198b385b-666a-45ef-a7e8-98894ce4e2ce",
+    "district": {
+      "_id": "345a3750-e739-48e2-b4cb-ccef666e4179",
+      "name": "Jalna",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Ashish Yerekar",
+    "designation": "District Collector",
+    "email": "collector.amaravati@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9359263184",
+    "is_palak_sachiv": false,
+    "_id": "fb769687-64af-41a4-aae9-439fb2fab6b8",
+    "district": {
+      "_id": "3e35c1de-d0dd-494f-bfe6-e550d27ac787",
+      "name": "Amravati",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Avishyant Panda",
+    "designation": "District Collector",
+    "email": "collector.gadchiroli@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9582246952",
+    "is_palak_sachiv": false,
+    "_id": "dda06dc0-61dc-43da-9110-e6e4ad3ca1ae",
+    "district": {
+      "_id": "72b83950-ee98-4e39-9a51-3a8939776a23",
+      "name": "Gadchiroli",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Ayush Prasad",
+    "designation": "District Collector",
+    "email": "collector.nashik@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9845568917",
+    "is_palak_sachiv": false,
+    "_id": "9c082923-e998-4552-b4f1-3b427dda3258",
+    "district": {
+      "_id": "218bca18-ba8b-4990-b09d-83369936de32",
+      "name": "Nashik",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Bhagyashree Dilip Vispute",
+    "designation": "District Collector",
+    "email": "collector.dhule@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "7838674076",
+    "is_palak_sachiv": false,
+    "_id": "1ef42211-fdba-47c9-a31e-f0bc437a9285",
+    "district": {
+      "_id": "1af0cf31-23c1-43df-a04a-cd39cfeec1e8",
+      "name": "Dhule",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "CMO Officer",
+    "designation": "Officer on Special Duty, Chief Minister's Office",
+    "email": "cmo@maharashtra.gov.in",
+    "role": "cmo",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "59427609-b58c-4726-bc94-9897a9a4bc46"
+  },
+  {
+    "name": "CS Office Admin",
+    "designation": "CS Office Staff (Portal Administrator)",
+    "email": "csoffice.admin@maharashtra.gov.in",
+    "role": "system_admin",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": true,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "df65f94d-2da8-428f-8921-c6d8081fdf4e"
+  },
+  {
+    "name": "Department Secretary — Agriculture",
+    "designation": "Secretary, Agriculture",
+    "email": "secy.agriculture@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "03aeef76-3206-4bf5-a601-9f59b43a9f49",
+    "department": {
+      "_id": "82950c50-8a2f-452c-b550-139c26c72d82",
+      "name": "Agriculture",
+      "short_name": "Agriculture"
+    }
+  },
+  {
+    "name": "Department Secretary — Education",
+    "designation": "Secretary, Education",
+    "email": "secy.education@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "e8760186-e259-41b6-b998-a41bf683ccbb",
+    "department": {
+      "_id": "af070b90-79a0-4379-9bc3-c30ffc4f1f9d",
+      "name": "Education",
+      "short_name": "Education"
+    }
+  },
+  {
+    "name": "Department Secretary — Energy",
+    "designation": "Secretary, Energy",
+    "email": "secy.energy@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "def3ebad-956a-44c4-9569-580ee54506ef",
+    "department": {
+      "_id": "f6230ae6-6fc2-4e25-8cdc-8b6cad8eaafd",
+      "name": "Energy",
+      "short_name": "Energy"
+    }
+  },
+  {
+    "name": "Department Secretary — Forest",
+    "designation": "Secretary, Forest",
+    "email": "secy.forest@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "7981e81b-f41e-4117-b299-0d1f6ff511e4",
+    "department": {
+      "_id": "2ccc4298-2ed7-4b0b-b09a-6959257ac95c",
+      "name": "Forest",
+      "short_name": "Forest"
+    }
+  },
+  {
+    "name": "Department Secretary — Health",
+    "designation": "Secretary, Health",
+    "email": "secy.health@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "53a4f8a0-1e55-4e29-955d-d65ee300a681",
+    "department": {
+      "_id": "f6e426c4-4c9c-4a4d-bbe9-b53e01959e0e",
+      "name": "Health",
+      "short_name": "Health"
+    }
+  },
+  {
+    "name": "Department Secretary — Home",
+    "designation": "Secretary, Home",
+    "email": "secy.home@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "8bf05847-e4e4-4d64-8d84-1913a5ca60de",
+    "department": {
+      "_id": "9752a1ff-45cb-4b17-a1f1-e13f96f866c2",
+      "name": "Home",
+      "short_name": "Home"
+    }
+  },
+  {
+    "name": "Department Secretary — Housing",
+    "designation": "Secretary, Housing",
+    "email": "secy.housing@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "53ad8d2c-3cc3-4fa6-a78c-804e5a4a59d3",
+    "department": {
+      "_id": "79493da0-261a-4458-873f-239f27c8b0c2",
+      "name": "Housing",
+      "short_name": "Housing"
+    }
+  },
+  {
+    "name": "Department Secretary — Industry",
+    "designation": "Secretary, Industry",
+    "email": "secy.industry@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "956a4ea5-dbf5-4209-8cc1-ce465590d8c0",
+    "department": {
+      "_id": "0a5efb52-b19b-4d92-9331-006746cbb259",
+      "name": "Industry",
+      "short_name": "Industry"
+    }
+  },
+  {
+    "name": "Department Secretary — PWD",
+    "designation": "Secretary, Public Works Department (PWD)",
+    "email": "secy.pwd@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "f8da7aba-877f-4fb7-aaf1-4b96b2d26543",
+    "department": {
+      "_id": "004935ff-bd1a-432d-bae5-412f231d09e0",
+      "name": "Public Works Department (PWD)",
+      "short_name": "PWD"
+    }
+  },
+  {
+    "name": "Department Secretary — Revenue",
+    "designation": "Secretary, Revenue",
+    "email": "secy.revenue@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "dc7ff895-5532-4fa6-97c8-e37d46e1d214",
+    "department": {
+      "_id": "f81a0b3f-6895-4379-bdd8-0c767618aba8",
+      "name": "Revenue",
+      "short_name": "Revenue"
+    }
+  },
+  {
+    "name": "Department Secretary — Rural Dev.",
+    "designation": "Secretary, Rural Development",
+    "email": "secy.rural.dev@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "f9dd033c-3e4f-4ec0-a240-942262075245",
+    "department": {
+      "_id": "aef1e650-fbf0-453d-a0fb-b1dcbfe1c15a",
+      "name": "Rural Development",
+      "short_name": "Rural Dev."
+    }
+  },
+  {
+    "name": "Department Secretary — Social Justice",
+    "designation": "Secretary, Social Justice",
+    "email": "secy.social.justice@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "81be627b-8d5d-4119-85d0-145412651529",
+    "department": {
+      "_id": "c1bff01a-dbcf-4aba-bf1f-2cf1983ce024",
+      "name": "Social Justice",
+      "short_name": "Social Justice"
+    }
+  },
+  {
+    "name": "Department Secretary — Transport",
+    "designation": "Secretary, Transport",
+    "email": "secy.transport@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "ac25e22f-316a-41be-bebb-84d77f36ade4",
+    "department": {
+      "_id": "a56c4c9b-11be-4478-a66c-ec1baaeabd11",
+      "name": "Transport",
+      "short_name": "Transport"
+    }
+  },
+  {
+    "name": "Department Secretary — UDD",
+    "designation": "Secretary, Urban Development (UDD)",
+    "email": "secy.udd@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "59c27d02-0dce-405e-ad46-91e47dadd5b9",
+    "department": {
+      "_id": "96689cd7-e5f0-44d2-af6e-597d7ec966aa",
+      "name": "Urban Development (UDD)",
+      "short_name": "UDD"
+    }
+  },
+  {
+    "name": "Department Secretary — Water Resources",
+    "designation": "Secretary, Water Resources",
+    "email": "secy.water.resources@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "6a33a14e-a888-4330-bc5f-82d40c67ac3d",
+    "department": {
+      "_id": "611c405c-f11d-42aa-81df-4a310abd4a15",
+      "name": "Water Resources",
+      "short_name": "Water Resources"
+    }
+  },
+  {
+    "name": "Department Secretary — WCD",
+    "designation": "Secretary, Women & Child Development",
+    "email": "secy.wcd@maharashtra.gov.in",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "356c2075-919f-4ea6-905b-f62c9dad573d",
+    "department": {
+      "_id": "6326d0c0-e3f9-4413-bcbf-66a1fc4310cb",
+      "name": "Women & Child Development",
+      "short_name": "WCD"
+    }
+  },
+  {
+    "name": "District Collector — Ahilyanagar",
+    "designation": "District Collector, Ahilyanagar",
+    "email": "collector.ahilyanagar@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "cd318d9b-e8d1-4996-9d86-08fb55435889",
+    "district": {
+      "_id": "49259184-1c00-4327-9227-274cdee97655",
+      "name": "Ahilyanagar",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "District Collector — Amravati",
+    "designation": "District Collector, Amravati",
+    "email": "collector.amravati@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "83fa6c06-10e3-4a9c-a204-ef9f8986d74e",
+    "district": {
+      "_id": "3e35c1de-d0dd-494f-bfe6-e550d27ac787",
+      "name": "Amravati",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "District Collector — Chhatrapati Sambhajinagar",
+    "designation": "District Collector, Chhatrapati Sambhajinagar",
+    "email": "collector.chhatrapati.sambhajinagar@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "a097a3f9-17de-4dd4-8f1f-9ecd2049829d",
+    "district": {
+      "_id": "8feb5273-1639-4238-9075-ef3b05771ce1",
+      "name": "Chhatrapati Sambhajinagar",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "District Collector — Kolhapur",
+    "designation": "District Collector, Kolhapur",
+    "email": "collector.kolhapur@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "d8c6e5b0-ab62-4646-b88b-fcedc637d2a6",
+    "district": {
+      "_id": "a30441fd-3d43-4000-9bfd-87e0b7eb7637",
+      "name": "Kolhapur",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "District Collector — Mumbai City",
+    "designation": "District Collector, Mumbai City",
+    "email": "collector.mumbai.city@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "434fb00f-efc7-41df-89fa-4f344631c669",
+    "district": {
+      "_id": "1e11049f-5392-4404-b5c6-5721f5547523",
+      "name": "Mumbai City",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "District Collector — Mumbai Suburban",
+    "designation": "District Collector, Mumbai Suburban",
+    "email": "collector.mumbai.suburban@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "e8cc9e51-f492-4360-abe1-c8362f5de429",
+    "district": {
+      "_id": "60e0aa0d-9620-4940-99b4-e4efbfb84e94",
+      "name": "Mumbai Suburban",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "District Collector — Nanded",
+    "designation": "District Collector, Nanded",
+    "email": "collector.nanded@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "4ee0d447-72f4-4182-8720-069b855ca319",
+    "district": {
+      "_id": "20a992c3-2237-4e0d-b17f-47fa28bef636",
+      "name": "Nanded",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "District Collector — Palghar",
+    "designation": "District Collector, Palghar",
+    "email": "collector.palghar@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "db525f2d-b791-4552-838a-9fe7fb775f83",
+    "district": {
+      "_id": "43034898-4e69-4fde-a9c9-c1cc13cae9c1",
+      "name": "Palghar",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "District Collector — Sangli",
+    "designation": "District Collector, Sangli",
+    "email": "collector.sangli@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "7e3ecb40-d436-49eb-874d-025cf6be15c3",
+    "district": {
+      "_id": "fb2c4978-b5e9-4fe9-ae38-45505f71bf94",
+      "name": "Sangli",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "District Collector — Satara",
+    "designation": "District Collector, Satara",
+    "email": "collector.satara@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "16acd647-37c8-4ef4-a885-beb8e93eaa2b",
+    "district": {
+      "_id": "7b639989-3140-4368-a37d-421d01ef0697",
+      "name": "Satara",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "District Collector — Washim",
+    "designation": "District Collector, Washim",
+    "email": "collector.washim@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "026b586d-a2cd-47d1-9b01-ca58b4abc02c",
+    "district": {
+      "_id": "3ff4bd41-5379-49c1-93ea-bab9a38eb9aa",
+      "name": "Washim",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Divisional Commissioner — Amravati",
+    "designation": "Divisional Commissioner, Amravati Division",
+    "email": "divcom.amravati@maharashtra.gov.in",
+    "role": "divisional_commissioner",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "944cfde1-7602-4da3-aca3-47a59e557cba"
+  },
+  {
+    "name": "Divisional Commissioner — Aurangabad",
+    "designation": "Divisional Commissioner, Aurangabad Division",
+    "email": "divcom.aurangabad@maharashtra.gov.in",
+    "role": "divisional_commissioner",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "9e1b4aa6-8440-445b-89d9-0fa1d43a27de"
+  },
+  {
+    "name": "Divisional Commissioner — Konkan",
+    "designation": "Divisional Commissioner, Konkan Division",
+    "email": "divcom.konkan@maharashtra.gov.in",
+    "role": "divisional_commissioner",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "5038de4f-be16-4779-8fe5-2bb5ed274e7c"
+  },
+  {
+    "name": "Divisional Commissioner — Nagpur",
+    "designation": "Divisional Commissioner, Nagpur Division",
+    "email": "divcom.nagpur@maharashtra.gov.in",
+    "role": "divisional_commissioner",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "058fb420-a671-4b37-b915-4006bed89c6b"
+  },
+  {
+    "name": "Divisional Commissioner — Nashik",
+    "designation": "Divisional Commissioner, Nashik Division",
+    "email": "divcom.nashik@maharashtra.gov.in",
+    "role": "divisional_commissioner",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "f7c62cc3-9ed9-4538-9343-e92d59c98ad6"
+  },
+  {
+    "name": "Divisional Commissioner — Pune",
+    "designation": "Divisional Commissioner, Pune Division",
+    "email": "divcom.pune@maharashtra.gov.in",
+    "role": "divisional_commissioner",
+    "is_active": true,
+    "created_at": "2026-05-13T06:43:02.483913+00:00",
+    "updated_at": "2026-05-13T06:43:02.483913+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "44645133-aecf-4781-9ec4-a51ce93f7536"
+  },
+  {
+    "name": "Dr. Bharat N. Bastewad",
+    "designation": "District Collector",
+    "email": "collector.latur@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9082670035",
+    "is_palak_sachiv": false,
+    "_id": "bf748a8c-fad0-4c47-b6c7-10bfffe2892d",
+    "district": {
+      "_id": "6461b956-040f-47f4-b4ed-00cd5c00fa7b",
+      "name": "Latur",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Dr. Harshadeep Kamble",
+    "designation": "Principal Secretary Social Justice",
+    "email": "psec.socjustice@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "124f798a-d044-42a3-97c7-9a06aad6dd10",
+    "district": {
+      "_id": "8feb5273-1639-4238-9075-ef3b05771ce1",
+      "name": "Chhatrapati Sambhajinagar",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Dr. Indurani Jakhar",
+    "designation": "District Collector",
+    "email": "collector.palghar.mh@gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8750870145",
+    "is_palak_sachiv": false,
+    "_id": "9255e202-599a-4630-8c91-56cdce56fde4",
+    "district": {
+      "_id": "43034898-4e69-4fde-a9c9-c1cc13cae9c1",
+      "name": "Palghar",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Dr. K. H. Govindrajan",
+    "designation": "Additional Chief Secretary Urban Development",
+    "email": "sec.ud2@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "1b669aa0-5d17-4a64-9b15-ebf97262190a",
+    "district": {
+      "_id": "ecf0c15c-28b8-4cd1-becd-d600a5217a25",
+      "name": "Raigad",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Dr. Mainak Ghosh",
+    "designation": "District Collector",
+    "email": "sanglicollector@gmail.com",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8240342574",
+    "is_palak_sachiv": false,
+    "_id": "efcbdc52-b7da-40c6-9ccf-6143ffdcf6d8",
+    "district": {
+      "_id": "fb2c4978-b5e9-4fe9-ae38-45505f71bf94",
+      "name": "Sangli",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Dr. Mangesh Gondavale",
+    "designation": "District Collector",
+    "email": "collector.gondia@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9867714511",
+    "is_palak_sachiv": false,
+    "_id": "6854ce4a-2bb6-4f93-bf98-937c43bc82ba",
+    "district": {
+      "_id": "0f5223da-fb2c-4a08-800a-a522732a7da5",
+      "name": "Gondia",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Dr. Mittali Sethi",
+    "designation": "District Collector",
+    "email": "collector.nandurbar@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8754117177",
+    "is_palak_sachiv": false,
+    "_id": "3106a55e-b704-49c2-a74b-8c7b604ddc75",
+    "district": {
+      "_id": "b2609c84-b3ee-4cf7-a0b4-7ef0002cbf8f",
+      "name": "Nandurbar",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Dr. Pankaj Ashiya",
+    "designation": "District Collector",
+    "email": "collector.Ahmednagar@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "7597614312",
+    "is_palak_sachiv": false,
+    "_id": "781d1a5b-9730-43b4-bbd8-743e47de6a1d",
+    "district": {
+      "_id": "49259184-1c00-4327-9227-274cdee97655",
+      "name": "Ahilyanagar",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Dr. Pravinkumar Deore",
+    "designation": "District Collector",
+    "email": "collector.buldhana@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "7588868686",
+    "is_palak_sachiv": false,
+    "_id": "e5e8457e-a052-4c11-a330-74be9e482bfa",
+    "district": {
+      "_id": "5840ff5e-3e49-45b2-8984-a8623b541af3",
+      "name": "Buldhana",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Dr. Shrikrishnanath B. Panchal",
+    "designation": "District Collector",
+    "email": "collector.thane@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9730234543",
+    "is_palak_sachiv": false,
+    "_id": "1948f778-4258-47de-b9fc-94df8656f039",
+    "district": {
+      "_id": "b889d072-909f-4535-940c-6df72f56a0c7",
+      "name": "Thane",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Dr. Vijay Chandrakant Rathod",
+    "designation": "District Collector",
+    "email": "collectorkolhapur@gmail.com",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8291909900",
+    "is_palak_sachiv": false,
+    "_id": "5872b4c2-9c26-4817-ae95-908554d69442",
+    "district": {
+      "_id": "a30441fd-3d43-4000-9bfd-87e0b7eb7637",
+      "name": "Kolhapur",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Jitendra Dudi",
+    "designation": "District Collector",
+    "email": "collector.pune@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9783802020",
+    "is_palak_sachiv": false,
+    "_id": "9bd9dfc2-ac27-4c94-b755-893b13a4a49a",
+    "district": {
+      "_id": "c8b4cb44-59c2-4557-8fb4-3ad6d0cb1144",
+      "name": "Pune",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Karthikeyan S",
+    "designation": "District Collector",
+    "email": "collector.solapur@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8610480624",
+    "is_palak_sachiv": false,
+    "_id": "a763a8c1-7896-4132-ba02-3c6e747753a1",
+    "district": {
+      "_id": "85062a77-ac71-4399-a6f2-1c92e5b49bad",
+      "name": "Solapur",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Keerthi Kiran H. Pujar",
+    "designation": "District Collector",
+    "email": "collector.dharashiv@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9448258862",
+    "is_palak_sachiv": false,
+    "_id": "a8f83ee0-54b8-4b5b-965b-c95dbd01ad90",
+    "district": {
+      "_id": "6c5facb6-cb6e-4f2f-933f-04d618d4775e",
+      "name": "Dharashiv",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Kishan Narayanrao Jawale",
+    "designation": "District Collector",
+    "email": "collector.raigad@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9011016999",
+    "is_palak_sachiv": false,
+    "_id": "0aed0dd9-7c7f-4320-8a16-324485546f24",
+    "district": {
+      "_id": "ecf0c15c-28b8-4cd1-becd-d600a5217a25",
+      "name": "Raigad",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Kumar Ashirwad",
+    "designation": "District Collector",
+    "email": "collector.nagpur@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9871017596",
+    "is_palak_sachiv": false,
+    "_id": "7579e73a-4600-4eb8-9ca3-6666d3c836eb",
+    "district": {
+      "_id": "d7493e2d-20fc-46ae-be77-517dd4c9771a",
+      "name": "Nagpur",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Manoj Vijay Ranade",
+    "designation": "CEO Zilla Parishad",
+    "email": "ceozp.palghar@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9920782571",
+    "is_palak_sachiv": false,
+    "_id": "7788b2fe-1d96-4ff6-8c99-1f9d454479ab",
+    "district": {
+      "_id": "43034898-4e69-4fde-a9c9-c1cc13cae9c1",
+      "name": "Palghar",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Manuj Jindal",
+    "designation": "District Collector",
+    "email": "collector.ratnagiri@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9699413642",
+    "is_palak_sachiv": false,
+    "_id": "f977123f-1592-42b6-a931-e11dd48da866",
+    "district": {
+      "_id": "9bca2068-533f-4c55-a96c-1eb9d760eac3",
+      "name": "Ratnagiri",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Pratik Bavi",
+    "designation": "CS Office",
+    "email": "bavipratik@gmail.com",
+    "role": "system_admin",
+    "is_active": true,
+    "created_at": "2026-05-08T15:57:39.937250+00:00",
+    "updated_at": "2026-05-08T15:57:39.937250+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": true,
+    "phone": null,
+    "is_palak_sachiv": true,
+    "_id": "8870b4ed-bbb0-44cb-b4a4-c0e57e518f91"
+  },
+  {
+    "name": "Pratik Bavi (QA)",
+    "designation": "QA Test Account",
+    "email": "pratikbbavi@gmail.com",
+    "role": "department_secretary",
+    "is_active": true,
+    "created_at": "2026-05-10T14:28:17.145514+00:00",
+    "updated_at": "2026-05-10T14:28:17.145514+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": true,
+    "phone": null,
+    "is_palak_sachiv": true,
+    "_id": "7f490d0d-a586-4375-a800-3807445c8a06"
+  },
+  {
+    "name": "Rahul Gupta",
+    "designation": "District Collector",
+    "email": "collector.hingoli@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "7777063063",
+    "is_palak_sachiv": false,
+    "_id": "8fb1b208-bf9a-44df-9fd9-6d27a904456f",
+    "district": {
+      "_id": "5b395d21-256e-453f-a2ee-3f1997b240fd",
+      "name": "Hingoli",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Rahul Kashinath Kardile",
+    "designation": "District Collector",
+    "email": "collectornanded1@gmail.com",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9552041375",
+    "is_palak_sachiv": false,
+    "_id": "6b624834-0b74-44db-af68-58cba3e820f2",
+    "district": {
+      "_id": "20a992c3-2237-4e0d-b17f-47fa28bef636",
+      "name": "Nanded",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Rishi Shirke",
+    "designation": "CS Office",
+    "email": "rishishirke65@gmail.com",
+    "role": "system_admin",
+    "is_active": true,
+    "created_at": "2026-05-08T15:57:39.937250+00:00",
+    "updated_at": "2026-05-08T15:57:39.937250+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": true,
+    "phone": null,
+    "is_palak_sachiv": true,
+    "_id": "afa94787-d086-467c-a7b6-4ce5829f9b2a"
+  },
+  {
+    "name": "Rohan Bapurao Ghuge",
+    "designation": "District Collector",
+    "email": "collector.jalgaon@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8802288310",
+    "is_palak_sachiv": false,
+    "_id": "f1df513a-4e1f-40b3-802a-3c08115b39ea",
+    "district": {
+      "_id": "9c210871-65ee-4288-855c-f801a61f4e57",
+      "name": "Jalgaon",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Sanjay Ramrao Chavan",
+    "designation": "District Collector",
+    "email": "collector.parbhani@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9822696080",
+    "is_palak_sachiv": false,
+    "_id": "9498068b-f8a2-49cb-af65-c94f361901e4",
+    "district": {
+      "_id": "a18d1249-8210-4e0a-9284-4881248a3eca",
+      "name": "Parbhani",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Santosh C. Patil",
+    "designation": "District Collector",
+    "email": "collectorsatara@gmail.com",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "7720073456",
+    "is_palak_sachiv": false,
+    "_id": "61507dd6-cb93-4c81-8a34-09b5119ede4d",
+    "district": {
+      "_id": "7b639989-3140-4368-a37d-421d01ef0697",
+      "name": "Satara",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Saurabh Katiyar",
+    "designation": "District Collector",
+    "email": "collector.mumbaisuburb@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8176013450",
+    "is_palak_sachiv": false,
+    "_id": "fadcc1cb-730a-44ed-8cf0-af6f7c867b08",
+    "district": {
+      "_id": "60e0aa0d-9620-4940-99b4-e4efbfb84e94",
+      "name": "Mumbai Suburban",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Sawan Kumar",
+    "designation": "District Collector",
+    "email": "collector.bhandara@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9717046084",
+    "is_palak_sachiv": false,
+    "_id": "9a4b8d4d-c8a1-468e-b3e5-002698a0ee44",
+    "district": {
+      "_id": "30cbef8d-ac1e-4c8b-9cb7-d078aae3e8a9",
+      "name": "Bhandara",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Shri Aseem Kumar Gupta",
+    "designation": "Additional Chief Secretary Urban Development",
+    "email": "psec.ud1@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "dedfdc3a-c96d-4900-bbc0-5d62da3999e8",
+    "district": {
+      "_id": "d7493e2d-20fc-46ae-be77-517dd4c9771a",
+      "name": "Nagpur",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Shri B. Venugopal Reddy",
+    "designation": "Additional Chief Secretary Higher Education",
+    "email": "psec.higheredu@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "fcb9fb94-98d4-419e-9d0d-2508926d890e",
+    "district": {
+      "_id": "34f11707-8cf0-419e-8db5-02b0f87ab013",
+      "name": "Chandrapur",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Shri Dhiraj Kumar",
+    "designation": "Secretary Medical Education",
+    "email": "psec.mededu@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "d6461e80-4d8d-455f-9ef5-707fee3efae6",
+    "district": {
+      "_id": "700eb656-58a5-48bb-8445-e31e30488134",
+      "name": "Yavatmal",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Shri Eknath Davale",
+    "designation": "Principal Secretary RDD and PR",
+    "email": "sec.rdd@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "4dfc95fd-a6bd-42a6-b43f-e402518ee85c",
+    "district": {
+      "_id": "218bca18-ba8b-4990-b09d-83369936de32",
+      "name": "Nashik",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Shri Milind Mhaiskar",
+    "designation": "Additional Chief Secretary Public Works Department",
+    "email": "ACS.pwd@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "4876f801-abed-4ebe-8e68-7715cf445274",
+    "district": {
+      "_id": "757816a2-5a4a-4a37-8203-8724f4fb13f4",
+      "name": "Wardha",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Shri N. Naveen Sona",
+    "designation": "Principal Secretary to Deputy Chief Minister",
+    "email": "psec.dcm1@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "89843918-1ec5-4b52-8190-6ef6c85dbd73",
+    "district": {
+      "_id": "b889d072-909f-4535-940c-6df72f56a0c7",
+      "name": "Thane",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Shri Om Prakash Gupta",
+    "designation": "Additional Chief Secretary Finance",
+    "email": "acs.finance@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "f96c5c5c-bcd3-499e-a34f-1ba87bd92ba8",
+    "district": {
+      "_id": "7b639989-3140-4368-a37d-421d01ef0697",
+      "name": "Satara",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Shri P. Anbalagan",
+    "designation": "Principal Secretary Industries",
+    "email": "psec.industry@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "cf6084d3-2e15-4240-abc0-ad36d48407b9",
+    "district": {
+      "_id": "b2609c84-b3ee-4cf7-a0b4-7ef0002cbf8f",
+      "name": "Nandurbar",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Shri Parag Jain-Nainutia",
+    "designation": "Principal Secretary Water Supply and Sanitation",
+    "email": "psec.wssd@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "fbc984a0-a253-4bc3-8491-a7d7a4715a64",
+    "district": {
+      "_id": "345a3750-e739-48e2-b4cb-ccef666e4179",
+      "name": "Jalna",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Shri Pravin Darade",
+    "designation": "Principal Secretary Co-Operation and Marketing",
+    "email": "psec.coop@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "3630f8fc-9e0c-4027-8187-cc2f8d165e29",
+    "district": {
+      "_id": "49259184-1c00-4327-9227-274cdee97655",
+      "name": "Ahilyanagar",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Shri Rajesh Aggarwal",
+    "designation": "Chief Secretary, Government of Maharashtra",
+    "email": "cs@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "79f32902-b16f-458a-94e0-545f23494fdb",
+    "district": {
+      "_id": "72b83950-ee98-4e39-9a51-3a8939776a23",
+      "name": "Gadchiroli",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Shri Ramaswami N.",
+    "designation": "Secretary Animal Husbandry Dairy and Fisheries",
+    "email": "psec.adf@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "91bc3aa6-f4e7-41e8-9912-f29b2dd5a1c2",
+    "district": {
+      "_id": "9c210871-65ee-4288-855c-f801a61f4e57",
+      "name": "Jalgaon",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Shri Ranjit Singh Deol",
+    "designation": "Principal Secretary School Education",
+    "email": "acs.schedu2@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "53d62ed9-7981-484e-afe9-3baf05de9767",
+    "district": {
+      "_id": "0f5223da-fb2c-4a08-800a-a522732a7da5",
+      "name": "Gondia",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Shri Sanjay Khandare",
+    "designation": "Principal Secretary Tourism",
+    "email": "psec.tourism@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "cf817159-a394-4aa8-9c9d-98517cd0b0f1",
+    "district": {
+      "_id": "60e0aa0d-9620-4940-99b4-e4efbfb84e94",
+      "name": "Mumbai Suburban",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Shri Sanjay Sethi",
+    "designation": "Additional Chief Secretary Transport and Ports",
+    "email": "acs.transport@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "bdbeba5b-b669-491c-8f94-878d0f9d9abe",
+    "district": {
+      "_id": "85062a77-ac71-4399-a6f2-1c92e5b49bad",
+      "name": "Solapur",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Shri Saurabh Vijay",
+    "designation": "Principal Secretary Expenditure",
+    "email": "psec.exp@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "46c61d2a-4108-4bf0-adad-b1b8d8f65fea",
+    "district": {
+      "_id": "48b4e8ec-6c17-4f3f-add5-c3802c747b12",
+      "name": "Akola",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Shri Tukaram Mundhe",
+    "designation": "Secretary Divyang Kalyan",
+    "email": "sec.dkv@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "f2226f82-b15a-4235-9dd0-f80342bade30",
+    "district": {
+      "_id": "a18d1249-8210-4e0a-9284-4881248a3eca",
+      "name": "Parbhani",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Shri Vijay Waghmare",
+    "designation": "Secretary Tribal Development",
+    "email": "sec.tribal@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "83f091f9-09bc-4026-877b-af0959d928ac",
+    "district": {
+      "_id": "6b39b29e-5a9b-4470-941c-044dd92c3e28",
+      "name": "Beed",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Shri Vikas Chandra Rastogi",
+    "designation": "Additional Chief Secretary Agriculture",
+    "email": "acs.agri@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "e7f3890f-d126-4294-b3bc-997d103da341",
+    "district": {
+      "_id": "1af0cf31-23c1-43df-a04a-cd39cfeec1e8",
+      "name": "Dhule",
+      "division": "Nashik"
+    }
+  },
+  {
+    "name": "Shri Vikas Kharge",
+    "designation": "Additional Chief Secretary Revenue",
+    "email": "psec.revenue@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "65dab7bc-ffee-47d4-b158-e3efed9b296c",
+    "district": {
+      "_id": "43034898-4e69-4fde-a9c9-c1cc13cae9c1",
+      "name": "Palghar",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Shri Virendra Singh",
+    "designation": "Secretary Information Technology",
+    "email": "psec.it@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "763deb07-a569-40ae-9868-1a45379d18b1",
+    "district": {
+      "_id": "94a71bd1-5c8c-4006-920d-69fa04ff58ff",
+      "name": "Sindhudurg",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Smt. Abha Shukla",
+    "designation": "Additional Chief Secretary Energy",
+    "email": "psec.energy@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "5441e33e-b131-493d-8d79-a562b59ead2e",
+    "district": {
+      "_id": "30cbef8d-ac1e-4c8b-9cb7-d078aae3e8a9",
+      "name": "Bhandara",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Smt. Anju Sinha",
+    "designation": "Principal Secretary Textile",
+    "email": "sec.texttile@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "c1f8a945-d182-40b8-bd4d-75c82a61252a",
+    "district": {
+      "_id": "6c5facb6-cb6e-4f2f-933f-04d618d4775e",
+      "name": "Dharashiv",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Smt. I. A. Kundra",
+    "designation": "Principal Secretary Labour",
+    "email": "psec.labour@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "010d202b-80a1-46a6-8b20-5eb2858d9827",
+    "district": {
+      "_id": "3e35c1de-d0dd-494f-bfe6-e550d27ac787",
+      "name": "Amravati",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Smt. Jayashree Bhoj",
+    "designation": "Secretary Environment and Climate Change",
+    "email": "psec.env@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "6cc90491-53eb-4e32-90eb-43b131a05fae",
+    "district": {
+      "_id": "a30441fd-3d43-4000-9bfd-87e0b7eb7637",
+      "name": "Kolhapur",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Smt. Manisha Patankar-Mhaiskar",
+    "designation": "Additional Chief Secretary Home",
+    "email": "acs.home@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "cb0c952f-fecd-450b-9bf3-8d750c5b4413",
+    "district": {
+      "_id": "6461b956-040f-47f4-b4ed-00cd5c00fa7b",
+      "name": "Latur",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Smt. Manisha Verma",
+    "designation": "Additional Chief Secretary Skills Development",
+    "email": "psec.skillcs@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "e816554a-6327-433b-aa6c-2f2649379438",
+    "district": {
+      "_id": "1e11049f-5392-4404-b5c6-5721f5547523",
+      "name": "Mumbai City",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Smt. Radhika Rastogi",
+    "designation": "Additional Chief Secretary Home Appeals",
+    "email": "psec.homeapl@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "f3f75abb-9bf7-4585-b9a2-47a7c96db825",
+    "district": {
+      "_id": "20a992c3-2237-4e0d-b17f-47fa28bef636",
+      "name": "Nanded",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Smt. Richa Bagla",
+    "designation": "Principal Secretary Accounts and Treasury",
+    "email": "psec.andt@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "9d79be4e-d9a5-43ac-b228-61856bd547e5",
+    "district": {
+      "_id": "5b395d21-256e-453f-a2ee-3f1997b240fd",
+      "name": "Hingoli",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Smt. Shaila A.",
+    "designation": "Secretary Planning and Development Commissioner",
+    "email": "acs.planning@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "6367852e-63a9-477c-8db8-e625b707a401",
+    "district": {
+      "_id": "5840ff5e-3e49-45b2-8984-a8623b541af3",
+      "name": "Buldhana",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Smt. V. Radha",
+    "designation": "Additional Chief Secretary Personnel",
+    "email": "acs.gadservies@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "3a448237-05a4-47b0-806f-14822c56adcf",
+    "district": {
+      "_id": "c8b4cb44-59c2-4557-8fb4-3ad6d0cb1144",
+      "name": "Pune",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Smt. Vinita Ved Singhal",
+    "designation": "Principal Secretary R and R",
+    "email": "acs.randr@maharashtra.gov.in",
+    "role": "guardian_secretary",
+    "is_active": true,
+    "created_at": "2026-04-23T10:49:40.942279+00:00",
+    "updated_at": "2026-04-23T10:49:40.942279+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": null,
+    "is_palak_sachiv": false,
+    "_id": "3ef4821d-1de0-40b6-b61e-8ccbc744b148",
+    "district": {
+      "_id": "fb2c4978-b5e9-4fe9-ae38-45505f71bf94",
+      "name": "Sangli",
+      "division": "Pune"
+    }
+  },
+  {
+    "name": "Trupti Ankush Dhodmise",
+    "designation": "District Collector",
+    "email": "collector.sindhudurg@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9689360825",
+    "is_palak_sachiv": false,
+    "_id": "95d3c9ce-951e-4d9b-861e-a31e0f48b5de",
+    "district": {
+      "_id": "94a71bd1-5c8c-4006-920d-69fa04ff58ff",
+      "name": "Sindhudurg",
+      "division": "Konkan"
+    }
+  },
+  {
+    "name": "Vanmathi C",
+    "designation": "District Collector",
+    "email": "collector.wardha@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9787114555",
+    "is_palak_sachiv": false,
+    "_id": "19bc22d3-e23f-486c-9824-df60852d1d8c",
+    "district": {
+      "_id": "757816a2-5a4a-4a37-8203-8724f4fb13f4",
+      "name": "Wardha",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Varsha Meena",
+    "designation": "District Collector",
+    "email": "collector.akola@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "7895661095",
+    "is_palak_sachiv": false,
+    "_id": "91612a22-8b51-44bc-b466-d67b617bf0bb",
+    "district": {
+      "_id": "48b4e8ec-6c17-4f3f-add5-c3802c747b12",
+      "name": "Akola",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Vasumana Pant",
+    "designation": "District Collector",
+    "email": "collector.chandrapur@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9717092419",
+    "is_palak_sachiv": false,
+    "_id": "d603875d-f3e8-4fd0-9e1b-fc9c213b4a39",
+    "district": {
+      "_id": "34f11707-8cf0-419e-8db5-02b0f87ab013",
+      "name": "Chandrapur",
+      "division": "Nagpur"
+    }
+  },
+  {
+    "name": "Vikas Meena",
+    "designation": "District Collector",
+    "email": "collector.yavatmal@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "8447494462",
+    "is_palak_sachiv": false,
+    "_id": "7fb6c733-14e6-4108-8a79-7057231ac0e1",
+    "district": {
+      "_id": "700eb656-58a5-48bb-8445-e31e30488134",
+      "name": "Yavatmal",
+      "division": "Amravati"
+    }
+  },
+  {
+    "name": "Vinay Gowda GC",
+    "designation": "District Collector",
+    "email": "abdcoll@gmail.com",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9739314598",
+    "is_palak_sachiv": false,
+    "_id": "26750c37-3242-4eef-b94d-335aab1edaaa",
+    "district": {
+      "_id": "8feb5273-1639-4238-9075-ef3b05771ce1",
+      "name": "Chhatrapati Sambhajinagar",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Vivek Johnson",
+    "designation": "District Collector",
+    "email": "collector.beed@maharashtra.gov.in",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9495608411",
+    "is_palak_sachiv": false,
+    "_id": "46095b74-362c-490b-a71b-14918d7fabc1",
+    "district": {
+      "_id": "6b39b29e-5a9b-4470-941c-044dd92c3e28",
+      "name": "Beed",
+      "division": "Aurangabad"
+    }
+  },
+  {
+    "name": "Yogesh Vijay Kumbhejkar",
+    "designation": "District Collector",
+    "email": "coll_washim@rediffmail.com",
+    "role": "district_collector",
+    "is_active": true,
+    "created_at": "2026-05-11T15:44:43.962179+00:00",
+    "updated_at": "2026-05-11T15:44:43.962179+00:00",
+    "parichay_uid": null,
+    "is_cso_admin": false,
+    "phone": "9654231609",
+    "is_palak_sachiv": false,
+    "_id": "754160f2-b781-4d59-8db1-e8d2f7802db3",
+    "district": {
+      "_id": "3ff4bd41-5379-49c1-93ea-bab9a38eb9aa",
+      "name": "Washim",
+      "division": "Amravati"
+    }
+  }
+]

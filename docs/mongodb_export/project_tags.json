@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Agriculture",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "405e2f8d-2553-488d-9be1-44db0d811879"
+  },
+  {
+    "name": "Education",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "8deeb740-7379-4ff0-a766-ac99434cedc4"
+  },
+  {
+    "name": "Energy",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "d54c5566-b2ca-47d1-932a-5df1c10c2efb"
+  },
+  {
+    "name": "Environment",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "44fbff22-bf8b-4f11-a0d4-f09dc8ad9100"
+  },
+  {
+    "name": "Health",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "4c11619d-a2b5-4615-83b9-d63b8f33633d"
+  },
+  {
+    "name": "Housing",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "3d5696b3-831b-48be-9b90-58bb89a53108"
+  },
+  {
+    "name": "Industry",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "e50fa636-3abb-4e1b-bf61-54f15f413027"
+  },
+  {
+    "name": "Infrastructure",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "df5a944d-13e7-404c-ac7e-e9b079974416"
+  },
+  {
+    "name": "IT",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "f6ef5b44-b6f9-450c-b793-378ca3ce25a7"
+  },
+  {
+    "name": "Road",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "b6258f19-6235-4445-a59d-c5d0be109c48"
+  },
+  {
+    "name": "Rural Development",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "213da3aa-a4c2-41cc-939d-44074de87293"
+  },
+  {
+    "name": "Social",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "3699a95e-66c0-4af4-9d2f-90bb585cb729"
+  },
+  {
+    "name": "Tourism",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "2b3793a9-0599-4b4f-b790-642588596b9f"
+  },
+  {
+    "name": "Transport",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "d613675c-f6ff-457e-9488-d3b3aac2b55a"
+  },
+  {
+    "name": "Urban Development",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "87f97550-68d5-4aa2-8649-40edfe12ad28"
+  },
+  {
+    "name": "Water Supply",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "1babf5e2-f0af-4342-833d-536e87db1075"
+  }
+]
