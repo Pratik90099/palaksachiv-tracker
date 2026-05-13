@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Central Scheme",
+    "description": "Centrally sponsored scheme projects",
+    "color": "#6366f1",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "3da3c1e7-2033-4487-913f-5e392ded5bc9"
+  },
+  {
+    "name": "CM War Room",
+    "description": "Chief Minister War Room monitored projects",
+    "color": "#6366f1",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "1333d795-e1b3-452d-a84f-fa25257fede5"
+  },
+  {
+    "name": "District Initiative",
+    "description": "District-level initiative projects",
+    "color": "#6366f1",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "3b9d1dca-be08-4e6a-a01d-90f20bdefc1c"
+  },
+  {
+    "name": "Other",
+    "description": "General/uncategorized projects",
+    "color": "#6366f1",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "bc63999c-b328-49ff-8371-9f4f647cb9e0"
+  },
+  {
+    "name": "PRAGATI",
+    "description": "Pro-Active Governance And Timely Implementation",
+    "color": "#6366f1",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "9286825a-72f9-4bf1-94b3-e0426c432e4f"
+  },
+  {
+    "name": "State Priority",
+    "description": "State-level priority projects",
+    "color": "#6366f1",
+    "created_at": "2026-03-18T09:38:39.838460+00:00",
+    "_id": "c35d1085-ae05-4d06-ab22-2eb07e65fc07"
+  }
+]

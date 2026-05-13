@@ -1,0 +1,218 @@
+[
+  {
+    "name": "Ahilyanagar",
+    "division": "Nashik",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "49259184-1c00-4327-9227-274cdee97655"
+  },
+  {
+    "name": "Akola",
+    "division": "Amravati",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "48b4e8ec-6c17-4f3f-add5-c3802c747b12"
+  },
+  {
+    "name": "Amravati",
+    "division": "Amravati",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "3e35c1de-d0dd-494f-bfe6-e550d27ac787"
+  },
+  {
+    "name": "Beed",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "6b39b29e-5a9b-4470-941c-044dd92c3e28"
+  },
+  {
+    "name": "Bhandara",
+    "division": "Nagpur",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "30cbef8d-ac1e-4c8b-9cb7-d078aae3e8a9"
+  },
+  {
+    "name": "Buldhana",
+    "division": "Amravati",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "5840ff5e-3e49-45b2-8984-a8623b541af3"
+  },
+  {
+    "name": "Chandrapur",
+    "division": "Nagpur",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "34f11707-8cf0-419e-8db5-02b0f87ab013"
+  },
+  {
+    "name": "Chhatrapati Sambhajinagar",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "8feb5273-1639-4238-9075-ef3b05771ce1"
+  },
+  {
+    "name": "Dharashiv",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "6c5facb6-cb6e-4f2f-933f-04d618d4775e"
+  },
+  {
+    "name": "Dhule",
+    "division": "Nashik",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "1af0cf31-23c1-43df-a04a-cd39cfeec1e8"
+  },
+  {
+    "name": "Gadchiroli",
+    "division": "Nagpur",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "72b83950-ee98-4e39-9a51-3a8939776a23"
+  },
+  {
+    "name": "Gondia",
+    "division": "Nagpur",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "0f5223da-fb2c-4a08-800a-a522732a7da5"
+  },
+  {
+    "name": "Hingoli",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "5b395d21-256e-453f-a2ee-3f1997b240fd"
+  },
+  {
+    "name": "Jalgaon",
+    "division": "Nashik",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "9c210871-65ee-4288-855c-f801a61f4e57"
+  },
+  {
+    "name": "Jalna",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "345a3750-e739-48e2-b4cb-ccef666e4179"
+  },
+  {
+    "name": "Kolhapur",
+    "division": "Pune",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "a30441fd-3d43-4000-9bfd-87e0b7eb7637"
+  },
+  {
+    "name": "Latur",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "6461b956-040f-47f4-b4ed-00cd5c00fa7b"
+  },
+  {
+    "name": "Mumbai City",
+    "division": "Konkan",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "1e11049f-5392-4404-b5c6-5721f5547523"
+  },
+  {
+    "name": "Mumbai Suburban",
+    "division": "Konkan",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "60e0aa0d-9620-4940-99b4-e4efbfb84e94"
+  },
+  {
+    "name": "Nagpur",
+    "division": "Nagpur",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "d7493e2d-20fc-46ae-be77-517dd4c9771a"
+  },
+  {
+    "name": "Nanded",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "20a992c3-2237-4e0d-b17f-47fa28bef636"
+  },
+  {
+    "name": "Nandurbar",
+    "division": "Nashik",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "b2609c84-b3ee-4cf7-a0b4-7ef0002cbf8f"
+  },
+  {
+    "name": "Nashik",
+    "division": "Nashik",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "218bca18-ba8b-4990-b09d-83369936de32"
+  },
+  {
+    "name": "Palghar",
+    "division": "Konkan",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "43034898-4e69-4fde-a9c9-c1cc13cae9c1"
+  },
+  {
+    "name": "Parbhani",
+    "division": "Aurangabad",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "a18d1249-8210-4e0a-9284-4881248a3eca"
+  },
+  {
+    "name": "Pune",
+    "division": "Pune",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "c8b4cb44-59c2-4557-8fb4-3ad6d0cb1144"
+  },
+  {
+    "name": "Raigad",
+    "division": "Konkan",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "ecf0c15c-28b8-4cd1-becd-d600a5217a25"
+  },
+  {
+    "name": "Ratnagiri",
+    "division": "Konkan",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "9bca2068-533f-4c55-a96c-1eb9d760eac3"
+  },
+  {
+    "name": "Sangli",
+    "division": "Pune",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "fb2c4978-b5e9-4fe9-ae38-45505f71bf94"
+  },
+  {
+    "name": "Satara",
+    "division": "Pune",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "7b639989-3140-4368-a37d-421d01ef0697"
+  },
+  {
+    "name": "Sindhudurg",
+    "division": "Konkan",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "94a71bd1-5c8c-4006-920d-69fa04ff58ff"
+  },
+  {
+    "name": "Solapur",
+    "division": "Pune",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "85062a77-ac71-4399-a6f2-1c92e5b49bad"
+  },
+  {
+    "name": "Thane",
+    "division": "Konkan",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "b889d072-909f-4535-940c-6df72f56a0c7"
+  },
+  {
+    "name": "Wardha",
+    "division": "Nagpur",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "757816a2-5a4a-4a37-8203-8724f4fb13f4"
+  },
+  {
+    "name": "Washim",
+    "division": "Amravati",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "3ff4bd41-5379-49c1-93ea-bab9a38eb9aa"
+  },
+  {
+    "name": "Yavatmal",
+    "division": "Amravati",
+    "created_at": "2026-03-13T10:37:35.252027+00:00",
+    "_id": "700eb656-58a5-48bb-8445-e31e30488134"
+  }
+]

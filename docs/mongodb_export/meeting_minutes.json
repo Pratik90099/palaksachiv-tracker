@@ -1,0 +1,42 @@
+[
+  {
+    "title": "Smaruddhi Meeting ",
+    "meeting_date": "2026-05-06",
+    "venue": "MAntralay",
+    "chaired_by": "Shri. Rajesh Aggarwal, IAS — Chief Secretary",
+    "attendees": null,
+    "agenda": null,
+    "minutes_text": "dkjhaskjdkls",
+    "decisions": [
+      "jsks"
+    ],
+    "action_items": null,
+    "created_at": "2026-05-06T06:12:33.729510+00:00",
+    "updated_at": "2026-05-06T06:12:33.729510+00:00",
+    "_id": "f24742b3-2b02-47a0-805e-15880d1c58fd",
+    "related_project": {
+      "_id": "554450e2-1435-4d26-a24e-e76479e6044f",
+      "title": "Samruddhi Highway"
+    }
+  },
+  {
+    "title": "Test CS Samruddhi",
+    "meeting_date": "2026-05-11",
+    "venue": "Mantralay",
+    "chaired_by": "Shri. Rajesh Aggarwal, IAS — Chief Secretary",
+    "attendees": null,
+    "agenda": null,
+    "minutes_text": "test",
+    "decisions": null,
+    "action_items": [
+      "@collector.pune to submit status"
+    ],
+    "created_at": "2026-05-11T17:05:43.385888+00:00",
+    "updated_at": "2026-05-11T17:05:43.385888+00:00",
+    "_id": "e70a63d0-5e87-4585-a0f8-1a1558a60cc6",
+    "related_project": {
+      "_id": "554450e2-1435-4d26-a24e-e76479e6044f",
+      "title": "Samruddhi Highway"
+    }
+  }
+]
