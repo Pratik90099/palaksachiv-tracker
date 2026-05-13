@@ -1,0 +1,11 @@
+id,name,short_code,description,category,status,owner,notes,display_order,created_at,updated_at
+169b22cd-059d-4ab5-8360-5d320e874147,GeM,gem,Government e-Marketplace,Procurement,planned,,,30,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+266dbedc-e8f3-4282-9cb1-342aae5872fc,PFMS,pfms,Public Financial Management System,Finance,planned,,,20,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+4035dacd-c0ae-43f3-b67f-e16634b2ab3d,PRAGATI,pragati,PM's Pro-Active Governance and Timely Implementation,Governance,planned,,,10,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+5385da8d-9960-4608-a205-2e7b7e74287a,Aaple Sarkar,aaplesarkar,Citizen grievance redressal,Grievance,planned,,,80,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+6d4788e7-6a5a-425b-8f37-22b0a94074aa,e-Taal,etaal,Electronic Transaction Aggregation & Analysis Layer,Analytics,planned,,,50,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+8cd9d77c-350b-40f7-8bc3-212dbafa043b,CMO Dashboard,cmo,Chief Minister's Office dashboard feed,Governance,planned,,,90,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+aa82a96e-2437-4d79-9452-b6342fa05b8b,SETU,setu,Maharashtra service delivery portal,Citizen Services,planned,,,60,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+b7b1755e-19a9-4d0b-849c-3a067a05e413,Parichay SSO,parichay,NIC single sign-on for government officers,Authentication,in_discussion,,,5,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+c919b24f-510d-4bef-b596-1fb3caa8674a,e-Office,eoffice,NIC e-Office for file movement,Administration,planned,,,40,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
+e27d89cd-6c07-4feb-87e8-6e37d3381532,Mahabhulekh,mahabhulekh,Maharashtra land records,Revenue,planned,,,70,2026-04-23 11:02:24.165316+00,2026-04-23 11:02:24.165316+00
