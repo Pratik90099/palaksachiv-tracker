@@ -1,0 +1,3 @@
+id,visit_id,kind,storage_path,file_name,file_size,mime_type,uploaded_by,created_at
+2c5ed057-04a1-4143-8020-bc6fca18c0b9,ed56506f-3fbc-4974-898c-1bbbe40fb71a,photo,visits/ed56506f-3fbc-4974-898c-1bbbe40fb71a/photos/6d40561f-f911-4694-a0f6-a1a9deda74d8-pratik-bavi-head-shot.jpg,pratik-bavi-head-shot.jpg,896387,image/jpeg,,2026-05-11 19:47:40.613376+00
+6ad6c339-5308-444a-870c-6ec03c581bd7,ed56506f-3fbc-4974-898c-1bbbe40fb71a,photo,visits/ed56506f-3fbc-4974-898c-1bbbe40fb71a/photos/079451bf-b87c-42b6-a466-84b33d46d2c2-statelogo.png,statelogo.png,115522,image/png,,2026-05-11 19:47:36.338202+00
