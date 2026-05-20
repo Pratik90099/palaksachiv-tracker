@@ -19,7 +19,9 @@ interface NavItem {
   url: string;
   icon: typeof Home;
   roles: UserRole[];
+  csoOnly?: boolean;
 }
+
 
 const NAV_ITEMS: NavItem[] = [
   { title: "Home", url: "/dashboard", icon: Home, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
