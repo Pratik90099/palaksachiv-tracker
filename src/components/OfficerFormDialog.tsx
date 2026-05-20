@@ -14,7 +14,7 @@ const ROLE_OPTIONS = [
   { value: "divisional_commissioner", label: "Divisional Commissioner" },
   { value: "chief_secretary", label: "Chief Secretary" },
   { value: "cmo", label: "CMO" },
-  { value: "system_admin", label: "CS Office Staff" },
+  { value: "system_admin", label: "Chief Secretary Office (System Admin)" },
 ];
 
 interface OfficerFormDialogProps {

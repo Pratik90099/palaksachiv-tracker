@@ -57,7 +57,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  const isCsoStaff = !!user && (user.is_cso_admin || user.role === "system_admin");
+  const isCsoStaff = !!user && (user.is_cso_admin || user.role === "system_admin" || user.role === "chief_secretary");
   const filteredItems = NAV_ITEMS.filter(item => {
     if (!user) return true;
     if (item.csoOnly && !isCsoStaff) return false;
@@ -65,12 +65,13 @@ export function AppSidebar() {
   });
 
 
+
   const roleLabel = user?.role === "guardian_secretary" ? "Guardian Secretary" :
     user?.role === "department_secretary" ? "Dept. Secretary" :
     user?.role === "district_collector" ? "District Collector" :
     user?.role === "divisional_commissioner" ? "Div. Commissioner" :
     user?.role === "chief_secretary" ? "Chief Secretary" :
-    user?.role === "cmo" ? "CMO" : "CS Office";
+    user?.role === "cmo" ? "CMO" : "CS Office (Admin)";
 
   return (
     <Sidebar collapsible="icon">

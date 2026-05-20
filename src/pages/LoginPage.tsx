@@ -20,7 +20,7 @@ const ROLES: { value: UserRole; label: string; sub: string }[] = [
   { value: "department_secretary", label: "Secretary of Department", sub: "Department-wide access" },
   { value: "guardian_secretary", label: "Palak Sachiv / Guardian Secretary", sub: "Assigned districts" },
   { value: "chief_secretary", label: "Chief Secretary", sub: "State-wide access" },
-  { value: "system_admin", label: "Chief Secretary's Office", sub: "Administrative access" },
+  { value: "system_admin", label: "Chief Secretary Office (System Admin)", sub: "Full administrative access" },
 ];
 
 export default function LoginPage() {
