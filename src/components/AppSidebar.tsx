@@ -19,7 +19,9 @@ interface NavItem {
   url: string;
   icon: typeof Home;
   roles: UserRole[];
+  csoOnly?: boolean;
 }
+
 
 const NAV_ITEMS: NavItem[] = [
   { title: "Home", url: "/dashboard", icon: Home, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
@@ -42,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Audit Trail", url: "/admin/audit-trail", icon: Shield, roles: ["system_admin", "chief_secretary"] },
   { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Document AI", url: "/document-ai", icon: FileUp, roles: ["system_admin"] },
-  { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },
+  { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary", "department_secretary", "district_collector", "divisional_commissioner", "guardian_secretary", "cmo"], csoOnly: true },
   { title: "My Profile", url: "/profile", icon: User, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Notifications", url: "/notifications", icon: Bell, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Help & Support", url: "/help", icon: HelpCircle, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
@@ -55,9 +57,13 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  const filteredItems = NAV_ITEMS.filter(item => 
-    user ? item.roles.includes(user.role) : true
-  );
+  const isCsoStaff = !!user && (user.is_cso_admin || user.role === "system_admin");
+  const filteredItems = NAV_ITEMS.filter(item => {
+    if (!user) return true;
+    if (item.csoOnly && !isCsoStaff) return false;
+    return item.roles.includes(user.role);
+  });
+
 
   const roleLabel = user?.role === "guardian_secretary" ? "Guardian Secretary" :
     user?.role === "department_secretary" ? "Dept. Secretary" :
