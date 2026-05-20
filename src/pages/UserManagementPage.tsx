@@ -70,6 +70,20 @@ export default function UserManagementPage() {
     }
   };
 
+  if (!isCsoStaff) {
+    return (
+      <div className="p-6">
+        <div className="gov-card-elevated max-w-xl mx-auto text-center py-12">
+          <Shield className="h-10 w-10 mx-auto text-muted-foreground" />
+          <h1 className="text-xl font-bold text-foreground font-display mt-3">Access restricted</h1>
+          <p className="text-sm text-muted-foreground mt-2">
+            Only CS Office Staff can manage portal users. Please contact the CS Office to add or modify officer accounts.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
@@ -81,6 +95,7 @@ export default function UserManagementPage() {
           <Plus className="h-4 w-4 mr-1" /> Add Officer
         </Button>
       </div>
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {["chief_secretary", "department_secretary", "guardian_secretary", "district_collector"].map((r) => (
