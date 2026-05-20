@@ -32,6 +32,8 @@ export default function UserManagementPage() {
 
   const canImpersonate =
     !!user && (user.is_cso_admin || user.role === "system_admin" || user.role === "chief_secretary");
+  const isCsoStaff = !!user && (user.is_cso_admin || user.role === "system_admin");
+
 
   const list = officers || [];
 
