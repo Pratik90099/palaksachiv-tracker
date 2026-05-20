@@ -44,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Audit Trail", url: "/admin/audit-trail", icon: Shield, roles: ["system_admin", "chief_secretary"] },
   { title: "Meeting Minutes", url: "/meeting-minutes", icon: BookOpen, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Document AI", url: "/document-ai", icon: FileUp, roles: ["system_admin"] },
-  { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary"] },
+  { title: "User Management", url: "/users", icon: Users, roles: ["system_admin", "chief_secretary", "department_secretary", "district_collector", "divisional_commissioner", "guardian_secretary", "cmo"], csoOnly: true },
   { title: "My Profile", url: "/profile", icon: User, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Notifications", url: "/notifications", icon: Bell, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
   { title: "Help & Support", url: "/help", icon: HelpCircle, roles: ["guardian_secretary", "department_secretary", "district_collector", "divisional_commissioner", "chief_secretary", "cmo", "system_admin"] },
