@@ -71,7 +71,7 @@ export function AppSidebar() {
     user?.role === "district_collector" ? "District Collector" :
     user?.role === "divisional_commissioner" ? "Div. Commissioner" :
     user?.role === "chief_secretary" ? "Chief Secretary" :
-    user?.role === "cmo" ? "CMO" : "CS Office";
+    user?.role === "cmo" ? "CMO" : "CS Office (Admin)";
 
   return (
     <Sidebar collapsible="icon">
