@@ -57,9 +57,13 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  const filteredItems = NAV_ITEMS.filter(item => 
-    user ? item.roles.includes(user.role) : true
-  );
+  const isCsoStaff = !!user && (user.is_cso_admin || user.role === "system_admin");
+  const filteredItems = NAV_ITEMS.filter(item => {
+    if (!user) return true;
+    if (item.csoOnly && !isCsoStaff) return false;
+    return item.roles.includes(user.role);
+  });
+
 
   const roleLabel = user?.role === "guardian_secretary" ? "Guardian Secretary" :
     user?.role === "department_secretary" ? "Dept. Secretary" :
