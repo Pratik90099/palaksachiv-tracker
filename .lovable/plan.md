@@ -1,35 +1,42 @@
 ## Goal
 
-Only CS Office Staff (officers with `is_cso_admin = true` or `role = 'system_admin'`) can add, edit, delete, or impersonate officers. Everyone else sees a read-only directory (or no access at all).
-
-## Current state
-
-- DB RLS on `officers` already gates writes on `has_role(auth.uid(), 'admin')`.
-- The `admin` app_role is granted by `grant_user_role_from_session()` trigger only when the officer is `is_cso_admin` OR `role = 'system_admin'`. So the backend rule is already correct.
-- The UI gap: `UserManagementPage.tsx` shows **Add / Edit / Delete** buttons to every logged-in user. Non-CSO users click "Add Officer", fill the form, and get a silent RLS rejection — confusing.
-- The route itself is also reachable by anyone.
+Make "Chief Secretary Office" explicitly the system_admin role, grant the `chief_secretary` role the same CSO admin powers, and rename labels for clarity. No security-scan findings are addressed here — those stay separate.
 
 ## Changes
 
-### 1. `src/pages/UserManagementPage.tsx`
-- Compute `isCsoStaff = user?.is_cso_admin || user?.role === 'system_admin'`.
-- If not CSO staff: render a friendly "Access restricted — only CS Office Staff can manage officers" empty state and hide the table entirely. (Or show read-only table without action buttons — pick one in the plan; default is **read-only table, no action column**.)
-- Hide the top-right **Add Officer** button unless `isCsoStaff`.
-- Hide **Edit / Delete / Login-as** action buttons in each row unless `isCsoStaff` (impersonation already had its own `canImpersonate` check — align it to the same flag).
+### 1. Login dropdown label (`src/pages/LoginPage.tsx`)
 
-### 2. `src/components/AppSidebar.tsx` (read-only verify)
-- Hide the "User Management" nav link for non-CSO users so they don't see a dead-end menu item. (Need to confirm current visibility logic — will read the file during implementation.)
+- Rename the `system_admin` option from "CSO" → **"Chief Secretary Office (System Admin)"**.
+- Keep the underlying role value `system_admin` unchanged (DB + RPC contracts stay intact).
 
-### 3. No DB / RLS changes
-- Backend already enforces the rule correctly. This is purely a UX fix so non-CSO users never see actions they can't perform.
+### 2. Role labels (sidebar + User Management page)
 
-## Out of scope
+- `AppSidebar.tsx`: change roleLabel fallback from "CS Office" → **"CS Office (Admin)"** for `system_admin`.
+- `UserManagementPage.tsx` ROLE_LABEL: `system_admin` → **"Chief Secretary Office (Admin)"**.
+- `OfficerFormDialog.tsx` ROLE_OPTIONS: same rename for the `system_admin` option.
 
-- No changes to OTP flow, `officers` table, or RLS policies.
-- No changes to other admin-gated pages (Audit Trail, AI Telemetry, etc.) — those can be reviewed in a follow-up if desired.
+### 3. Grant chief_secretary the admin app_role (DB migration)
+
+- Update `public.grant_user_role_from_session()` so the `admin` app_role is also granted when `officer.role = 'chief_secretary'` (in addition to the current `is_cso_admin` / `role = 'system_admin'`).
+- Backfill: insert `('admin')` into `user_roles` for all existing `session_officer_map` rows whose officer has `role = 'chief_secretary'` (ON CONFLICT DO NOTHING) so currently logged-in CS officers gain admin powers without re-login.
+
+### 4. Frontend admin gates
+
+- `src/pages/UserManagementPage.tsx`: extend `isCsoStaff` to include `user.role === 'chief_secretary'`.
+- `src/components/AppSidebar.tsx`: same update to `isCsoStaff` (so the "User Management" link shows for Chief Secretary too).
+- `canImpersonate` already includes `chief_secretary` — no change.
+
+### 5. Memory update
+
+- Update `mem://index.md` Core auth line: clarify that **both `system_admin` and `chief_secretary` are admin-grade roles** with full CSO admin powers.
+
+## Out of scope (not touched in this turn)
+
+- The three security-scan findings on the security panel (officers PII RLS, documents bucket policies, realtime topic scoping). Those will be addressed separately if you ask.
+- Any other role's permissions (Guardian Secretary, Collector, etc. remain as-is).
 
 ## Test plan
 
-1. Sign in as `pratikbbavi@gmail.com` (CSO admin via QA bypass) → User Management → see Add/Edit/Delete buttons → add a new officer successfully.
-2. Sign in as a Department Secretary or District Collector → either see no "User Management" link, or land on a read-only directory with no action buttons.
-3. Confirm RLS still rejects manual API calls from non-CSO sessions (defense in depth).
+1. Sign in as `pratikbbavi@gmail.com , bavipratik@gmail.com`and choose the renamed "Chief Secretary Office (System Admin)" option → lands on home → User Management visible → can add officer.
+2. Log in as an officer whose `officers.role = 'chief_secretary'` → sidebar shows "User Management" → Add Officer succeeds (RLS passes because `admin` user_role is now granted).
+3. Log in as a Department Secretary → "User Management" still hidden → access-restricted card if navigated directly.
