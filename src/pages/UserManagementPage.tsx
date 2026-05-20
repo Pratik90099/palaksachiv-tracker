@@ -17,7 +17,7 @@ const ROLE_LABEL: Record<string, string> = {
   divisional_commissioner: "Divisional Commissioner",
   chief_secretary: "Chief Secretary",
   cmo: "CMO",
-  system_admin: "CS Office Staff",
+  system_admin: "Chief Secretary Office (Admin)",
 };
 
 export default function UserManagementPage() {
