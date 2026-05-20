@@ -1,25 +1,37 @@
-## Plan: Add seed CSV bundle to repo for GitHub sync
+# Fix: Add Officer from User Management + OTP delivery
 
-### Goal
-Make the complete interlinked seed CSV bundle available in the GitHub repository so the user can download it from GitHub and import into Supabase Studio.
+## Problem
+Clicking **Add Officer** in User Management appears to do nothing / errors. New users therefore never exist in `officers`, so `request_login_otp` returns `{sent:true}` with no actual code sent (the function silently no-ops when the officer isn't found).
 
-### Steps
-1. Create `docs/seed/` directory in the project root
-2. Copy all 22 CSV files + `00_README.txt` from `/mnt/documents/seed/` into `docs/seed/`
-3. Verify file list matches the expected 23 files (22 CSVs + README)
+## Root cause
+- `officers` INSERT RLS = `has_role(auth.uid(), 'admin')`
+- The DB function `grant_user_role_from_session()` is supposed to grant that `admin` role to CSO Office staff (`is_cso_admin = true` or `role = 'system_admin'`) the moment they bind their session via `bind_session_officer`.
+- The schema currently has **no triggers** — so `user_roles` is never populated, and every officer INSERT is rejected by RLS. The `useCreateOfficer` mutation throws a permission error, and only the generic toast is shown (often unnoticed).
 
-### Import order (documented in 00_README.txt)
-Tier 1 (reference): `01_districts.csv`, `02_departments.csv`, `03_project_categories.csv`, `04_project_tags.csv`
-Tier 2 (directory): `05_officers.csv`, `06_guardian_secretaries.csv`
-Tier 3 (work items): `07_projects.csv`, `08_tasks.csv`
-Tier 4 (join tables): `09_project_districts.csv`, `10_project_departments.csv`, `11_project_tag_assignments.csv`, `12_task_districts.csv`, `13_task_departments.csv`
-Tier 5 (operational): `14_visits.csv` through `22_ai_insights.csv`
+OTP delivery itself is healthy — once the officer row exists, `request_login_otp` + `send-login-otp` already handle everything (verified in conversation history).
 
-### Excluded tables (cannot be pre-seeded)
-- `user_roles` — populated by login trigger from auth.users
-- `session_officer_map` — populated at login
-- `login_otps` — ephemeral, RLS-locked
-- `audit_logs`, `ai_call_logs`, `site_visits` — runtime-only
+## Fix
 
-### Expected outcome
-All seed files appear in the project file tree; GitHub bidirectional sync pushes them to the connected repository automatically.
+### 1. Database migration
+- Attach the missing trigger:
+  ```
+  CREATE TRIGGER trg_grant_user_role_from_session
+    AFTER INSERT OR UPDATE ON public.session_officer_map
+    FOR EACH ROW EXECUTE FUNCTION public.grant_user_role_from_session();
+  ```
+- Backfill: for every existing `session_officer_map` row whose officer is `is_cso_admin = true` or `role = 'system_admin'`, insert `('admin')` into `user_roles` (ON CONFLICT DO NOTHING). This re-enables already-logged-in CSO admins without forcing them to log out/in.
+
+### 2. Frontend polish (small)
+`src/components/OfficerFormDialog.tsx` — on successful create, also show a hint toast: *"Officer can now sign in — they'll receive a 6-digit OTP at {email} after choosing their role on the login screen."* No logic change.
+
+(Optional) `src/hooks/use-data.ts` — surface a clearer message if Postgres returns `42501` permission denied (e.g. "Only CS Office admins can add officers — please re-login").
+
+## Test plan
+1. Log in as `pratikbbavi@gmail.com` (QA bypass, CSO admin) → User Management → **Add Officer** with a real email → expect success toast + row appears in table.
+2. Log out, go to Login, select the new officer's role, enter their email → expect "Code sent to …".
+3. Receive 6-digit OTP email → enter → land on dashboard.
+
+## Files touched
+- `supabase/migrations/<new>.sql` — trigger + backfill
+- `src/components/OfficerFormDialog.tsx` — success-toast copy
+- `src/hooks/use-data.ts` *(optional)* — friendlier RLS error

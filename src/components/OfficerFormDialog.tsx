@@ -83,11 +83,18 @@ export function OfficerFormDialog({ open, onOpenChange, editOfficer }: OfficerFo
         toast.success("Officer updated");
       } else {
         await createOfficer.mutateAsync(payload);
-        toast.success("Officer added");
+        toast.success("Officer added", {
+          description: payload.email
+            ? `They can now sign in — a 6-digit OTP will be emailed to ${payload.email} after they pick their role on the login screen.`
+            : "Add an email so they can receive a login OTP.",
+        });
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to save officer");
+      const msg = (err?.code === "42501" || /row-level security/i.test(err?.message || ""))
+        ? "Only CS Office admins can add officers. Please sign out and sign back in, then try again."
+        : (err.message || "Failed to save officer");
+      toast.error(msg);
     }
   };
 
