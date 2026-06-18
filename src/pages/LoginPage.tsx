@@ -214,60 +214,101 @@ export default function LoginPage() {
           <AnimatePresence mode="wait">
             {step === "identify" ? (
               <motion.div key="identify" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <div className="text-center mb-8">
+                <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold text-foreground font-display">Sign In</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Choose your role and we'll email you a one-time code
+                    Choose how you'd like to sign in
                   </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium">Sign in as</Label>
-                    <Select value={role} onValueChange={(v) => { setRole(v as UserRole); setError(""); }}>
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLES.map((r) => (
-                          <SelectItem key={r.value} value={r.value}>
-                            <div className="flex flex-col items-start">
-                              <span className="font-medium">{r.label}</span>
-                              <span className="text-[10px] text-muted-foreground">{r.sub}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <Tabs value={authMode} onValueChange={(v) => { setAuthMode(v as "otp" | "password"); setError(""); }} className="w-full">
+                  <TabsList className="grid grid-cols-2 w-full mb-5">
+                    <TabsTrigger value="otp">One-time code</TabsTrigger>
+                    <TabsTrigger value="password">Password</TabsTrigger>
+                  </TabsList>
 
-                  <div>
-                    <Label className="text-sm font-medium">Email Address</Label>
-                    <div className="relative mt-1.5">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="email"
-                        value={email}
-                        onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                        placeholder="your.email@gov.in"
-                        className="pl-10"
-                        maxLength={255}
-                        onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
-                      />
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">Sign in as</Label>
+                      <Select value={role} onValueChange={(v) => { setRole(v as UserRole); setError(""); }}>
+                        <SelectTrigger className="mt-1.5">
+                          <SelectValue placeholder="Select your role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{r.label}</span>
+                                <span className="text-[10px] text-muted-foreground">{r.sub}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-1.5">
-                      The code will be sent to your registered email (and phone, once SMS is enabled).
-                    </p>
+
+                    <div>
+                      <Label className="text-sm font-medium">Email Address</Label>
+                      <div className="relative mt-1.5">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="email"
+                          value={email}
+                          onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                          placeholder="your.email@gov.in"
+                          className="pl-10"
+                          maxLength={255}
+                          onKeyDown={(e) => e.key === "Enter" && authMode === "otp" && handleSendOtp()}
+                        />
+                      </div>
+                    </div>
+
+                    <TabsContent value="otp" className="m-0 space-y-4">
+                      <p className="text-[10px] text-muted-foreground -mt-2">
+                        The code will be sent to your registered email (and phone, once SMS is enabled).
+                      </p>
+                      {error && (
+                        <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
+                      )}
+                      <Button onClick={handleSendOtp} disabled={loading} className="w-full py-3">
+                        {loading ? "Sending code..." : "Send one-time code"}
+                      </Button>
+                    </TabsContent>
+
+                    <TabsContent value="password" className="m-0 space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">Password</Label>
+                        <div className="relative mt-1.5">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="password"
+                            value={password}
+                            onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                            placeholder="Enter your password"
+                            className="pl-10"
+                            maxLength={128}
+                            autoComplete="current-password"
+                            onKeyDown={(e) => e.key === "Enter" && handlePasswordSignIn()}
+                          />
+                        </div>
+                      </div>
+                      {error && (
+                        <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
+                      )}
+                      <Button onClick={handlePasswordSignIn} disabled={loading} className="w-full py-3">
+                        {loading ? "Signing in..." : "Sign in"}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={loading}
+                        className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                      >
+                        Forgot password?
+                      </button>
+                    </TabsContent>
                   </div>
-
-                  {error && (
-                    <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
-                  )}
-
-                  <Button onClick={handleSendOtp} disabled={loading} className="w-full py-3">
-                    {loading ? "Sending code..." : "Send one-time code"}
-                  </Button>
-                </div>
+                </Tabs>
 
                 <p className="text-[10px] text-muted-foreground text-center mt-6">
                   Access is limited to officers registered in the Officer Directory.
