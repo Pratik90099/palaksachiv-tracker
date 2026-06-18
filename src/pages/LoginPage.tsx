@@ -100,6 +100,43 @@ export default function LoginPage() {
     }
   };
 
+  const handlePasswordSignIn = async () => {
+    setError("");
+    if (!role) { setError("Please choose a role."); return; }
+    if (!email.trim() || !email.includes("@")) { setError("Please enter a valid email address."); return; }
+    if (!password) { setError("Please enter your password."); return; }
+    setLoading(true);
+    try {
+      const user = await signInWithPasswordAndBindOfficer(email, password, role as UserRole);
+      setUserFromAdapter(user);
+      toast.success(`Welcome, ${user.name}`);
+      navigate("/dashboard");
+    } catch (e: any) {
+      setError(e?.message || "Could not sign in.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError("");
+    if (!email.trim() || !email.includes("@")) {
+      setError("Enter your email above, then click 'Forgot password?' again.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await requestPasswordReset(email);
+      toast.success("Password reset email sent", {
+        description: "Check your inbox for a link to set a new password.",
+      });
+    } catch (e: any) {
+      setError(e?.message || "Could not send reset email.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const restart = () => {
     setStep("identify");
     setCode("");
