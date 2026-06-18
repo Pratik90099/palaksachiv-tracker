@@ -11,7 +11,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { requestLoginOtp, verifyLoginOtp } from "@/lib/auth-adapter";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  requestLoginOtp,
+  verifyLoginOtp,
+  signInWithPasswordAndBindOfficer,
+  requestPasswordReset,
+} from "@/lib/auth-adapter";
 import { UserRole } from "@/lib/mock-data";
 import { toast } from "sonner";
 
