@@ -1301,6 +1301,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      find_login_officer_public: {
+        Args: { _email: string; _role: string }
+        Returns: Json
+      }
       get_officer_full: {
         Args: { _officer_id: string }
         Returns: {
