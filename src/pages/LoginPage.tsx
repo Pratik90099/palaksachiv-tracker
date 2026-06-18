@@ -33,9 +33,11 @@ export default function LoginPage() {
   const { setUserFromAdapter } = useAuth();
   const navigate = useNavigate();
 
+  const [authMode, setAuthMode] = useState<"otp" | "password">("otp");
   const [step, setStep] = useState<"identify" | "verify">("identify");
   const [role, setRole] = useState<UserRole | "">("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
