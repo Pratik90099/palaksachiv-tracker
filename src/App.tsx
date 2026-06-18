@@ -41,6 +41,7 @@ import SitemapPage from "./pages/static/SitemapPage";
 import ContactPage from "./pages/static/ContactPage";
 import UserManualPage from "./pages/static/UserManualPage";
 import NotFound from "./pages/NotFound";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />

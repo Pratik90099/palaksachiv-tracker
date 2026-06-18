@@ -127,3 +127,69 @@ export async function loginAsOfficer(officerId: string): Promise<AuthUser> {
     phone: (data as any).phone || undefined,
   };
 }
+
+/** Password sign-in — authenticates via Supabase Auth, then binds to the matching officer. */
+export async function signInWithPasswordAndBindOfficer(
+  email: string,
+  password: string,
+  role: UserRole,
+): Promise<AuthUser> {
+  const cleanEmail = email.trim().toLowerCase();
+  const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password,
+  });
+  if (authErr || !authData.session) {
+    throw new Error(authErr?.message || "Invalid email or password.");
+  }
+
+  // Resolve the officer row that matches (email, role) — same dual-charge rules as OTP.
+  const { data: lookup, error: lookupErr } = await supabase.rpc("find_login_officer_public", {
+    _email: cleanEmail,
+    _role: role,
+  });
+  const r = (lookup ?? {}) as Record<string, unknown>;
+  if (lookupErr || !r.found) {
+    await supabase.auth.signOut();
+    throw new Error("No officer registered with this email for the selected role.");
+  }
+
+  const officerId = r.id as string;
+  await supabase.rpc("bind_session_officer", { _officer_id: officerId });
+
+  // Hydrate the full profile (district / department names).
+  const { data: full } = await supabase.rpc("get_officer_full", { _officer_id: officerId });
+  const { data: meta } = await supabase
+    .from("officers")
+    .select("districts(name, division), departments(name, short_name)")
+    .eq("id", officerId)
+    .maybeSingle();
+  const o = (full ?? {}) as any;
+  return {
+    id: o.id,
+    name: o.name,
+    email: o.email || cleanEmail,
+    designation: o.designation || "",
+    role: role,
+    district: (meta as any)?.districts?.name,
+    division: (meta as any)?.districts?.division,
+    department: (meta as any)?.departments?.short_name || (meta as any)?.departments?.name,
+    is_cso_admin: !!o.is_cso_admin,
+    phone: o.phone || undefined,
+  };
+}
+
+/** Send a password-reset email. Redirects back to /reset-password to set a new one. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Update the current user's password (used by the reset-password page). */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(error.message);
+}
+
