@@ -276,6 +276,9 @@ export default function LoginPage() {
                     </TabsContent>
 
                     <TabsContent value="password" className="m-0 space-y-4">
+                      <p className="text-[10px] text-muted-foreground -mt-2">
+                        Password sign-in is enabled for CSO administrators and accounts explicitly granted access. Other officers should use the One-time code tab.
+                      </p>
                       <div>
                         <Label className="text-sm font-medium">Password</Label>
                         <div className="relative mt-1.5">
