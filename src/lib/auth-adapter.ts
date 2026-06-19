@@ -128,7 +128,23 @@ export async function loginAsOfficer(officerId: string): Promise<AuthUser> {
   };
 }
 
-/** Password sign-in — authenticates via Supabase Auth, then binds to the matching officer. */
+/** Best-effort audit logger — never blocks the login flow. */
+async function logPasswordAttempt(email: string, role: string, success: boolean, reason: string) {
+  try {
+    await supabase.rpc("log_password_login_attempt", {
+      _email: email,
+      _role: role,
+      _success: success,
+      _reason: reason,
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Password sign-in — authenticates via Supabase Auth, then binds to the matching officer.
+ *  Server-side checks: officer must exist for (email, role), and password login must be
+ *  enabled for that account (CSO admin / system_admin / chief_secretary or explicitly granted). */
 export async function signInWithPasswordAndBindOfficer(
   email: string,
   password: string,
@@ -140,6 +156,7 @@ export async function signInWithPasswordAndBindOfficer(
     password,
   });
   if (authErr || !authData.session) {
+    await logPasswordAttempt(cleanEmail, role, false, "invalid_credentials");
     throw new Error(authErr?.message || "Invalid email or password.");
   }
 
@@ -151,7 +168,14 @@ export async function signInWithPasswordAndBindOfficer(
   const r = (lookup ?? {}) as Record<string, unknown>;
   if (lookupErr || !r.found) {
     await supabase.auth.signOut();
+    await logPasswordAttempt(cleanEmail, role, false, "no_officer_for_role");
     throw new Error("No officer registered with this email for the selected role.");
+  }
+
+  if (r.password_login_enabled === false) {
+    await supabase.auth.signOut();
+    await logPasswordAttempt(cleanEmail, role, false, "password_login_disabled");
+    throw new Error("Password login is not enabled for this account. Use the One-time code tab instead.");
   }
 
   const officerId = r.id as string;
@@ -165,6 +189,7 @@ export async function signInWithPasswordAndBindOfficer(
     .eq("id", officerId)
     .maybeSingle();
   const o = (full ?? {}) as any;
+  await logPasswordAttempt(cleanEmail, role, true, "ok");
   return {
     id: o.id,
     name: o.name,
@@ -179,12 +204,16 @@ export async function signInWithPasswordAndBindOfficer(
   };
 }
 
-/** Send a password-reset email. Redirects back to /reset-password to set a new one. */
+/** Send a password-reset email. Always succeeds from the UI's perspective —
+ *  the edge function rate-limits, audits, and refuses to send for non-allowed roles
+ *  without telling the client whether the email exists. */
 export async function requestPasswordReset(email: string): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-    redirectTo: `${window.location.origin}/reset-password`,
+  await supabase.functions.invoke("password-reset-request", {
+    body: {
+      email: email.trim().toLowerCase(),
+      redirectTo: `${window.location.origin}/reset-password`,
+    },
   });
-  if (error) throw new Error(error.message);
 }
 
 /** Update the current user's password (used by the reset-password page). */
