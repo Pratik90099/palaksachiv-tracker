@@ -482,6 +482,7 @@ export type Database = {
           is_palak_sachiv: boolean
           name: string
           parichay_uid: string | null
+          password_login_enabled: boolean
           phone: string | null
           role: string
           updated_at: string
@@ -498,6 +499,7 @@ export type Database = {
           is_palak_sachiv?: boolean
           name: string
           parichay_uid?: string | null
+          password_login_enabled?: boolean
           phone?: string | null
           role?: string
           updated_at?: string
@@ -514,6 +516,7 @@ export type Database = {
           is_palak_sachiv?: boolean
           name?: string
           parichay_uid?: string | null
+          password_login_enabled?: boolean
           phone?: string | null
           role?: string
           updated_at?: string
@@ -534,6 +537,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      password_reset_requests: {
+        Row: {
+          email: string
+          id: string
+          ip: unknown
+          reason: string | null
+          requested_at: string
+          success: boolean
+        }
+        Insert: {
+          email: string
+          id?: string
+          ip?: unknown
+          reason?: string | null
+          requested_at?: string
+          success?: boolean
+        }
+        Update: {
+          email?: string
+          id?: string
+          ip?: unknown
+          reason?: string | null
+          requested_at?: string
+          success?: boolean
+        }
+        Relationships: []
       }
       project_categories: {
         Row: {
@@ -1290,6 +1320,7 @@ export type Database = {
           is_palak_sachiv: boolean
           name: string
           parichay_uid: string | null
+          password_login_enabled: boolean
           phone: string | null
           role: string
           updated_at: string
@@ -1319,6 +1350,7 @@ export type Database = {
           is_palak_sachiv: boolean
           name: string
           parichay_uid: string | null
+          password_login_enabled: boolean
           phone: string | null
           role: string
           updated_at: string
@@ -1344,6 +1376,7 @@ export type Database = {
           is_palak_sachiv: boolean
           name: string
           parichay_uid: string | null
+          password_login_enabled: boolean
           phone: string | null
           role: string
           updated_at: string
@@ -1365,8 +1398,21 @@ export type Database = {
       }
       is_privileged_visit_writer: { Args: never; Returns: boolean }
       is_visit_owner: { Args: { _visit_id: string }; Returns: boolean }
+      log_password_login_attempt: {
+        Args: {
+          _email: string
+          _reason: string
+          _role: string
+          _success: boolean
+        }
+        Returns: undefined
+      }
       request_login_otp: {
         Args: { _email: string; _role: string }
+        Returns: Json
+      }
+      request_password_reset_check: {
+        Args: { _email: string; _ip: string }
         Returns: Json
       }
       verify_login_otp: {
